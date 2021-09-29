@@ -39,9 +39,12 @@ if phi2 < 0
     phi2 = phi2 + 2*pi;
 end
 
+
+
 %Reorganizing vectors into individual values for anonymous function
 eival11 = eival1(1,1); eival12 = eival1(2,2);
 eival21 = eival2(1,1); eival22 = eival2(2,2);
+
 
 d21x = cntr2(1) - cntr1(1);
 d21y = cntr2(2) - cntr1(2);
@@ -62,6 +65,8 @@ while exit ~= 1 && iter < 100 %catch in case the solution does not converge. Wil
     [~,fval,exit] = fminsearch(costfn,theta0,options);%options);
     
     chisq = (fval^2)/2;
+    disp(chisq)
+    
     confidencelimit = chi2cdf(chisq,2);
     
     iter = iter + 1;
