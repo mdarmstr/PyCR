@@ -130,5 +130,6 @@ def clustResolution(clust1, clust2):
         iter = iter + 1
         if iter == 100:
             confidencelimit = 0
-        print(confidencelimit)
+        # print(confidencelimit)
         exit = 1
+    return confidencelimit
