@@ -2,7 +2,7 @@ import xlrd
 import ClustResolution
 def main():
     # To open Workbook
-    wb = xlrd.open_workbook('data/CasevControl.xlsx')
+    wb = xlrd.open_workbook('data/cluster.xlsx')
     # select the first sheet from xlsx file
     sheet = wb.sheet_by_index(0)
     # print(sheet.cell_value(0, 0))
