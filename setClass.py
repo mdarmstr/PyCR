@@ -32,7 +32,7 @@ def setClass(fileName):
             classList.append(class_value_counter)
             class_value_counter = class_value_counter + 1
     df = pd.read_excel(fileName)
-    df["ClassNum"] = classList
+    df.insert(2,"ClassNum",classList,True)
     df.to_excel("data/setClass_file.xlsx", index=False)
     print(classList)
 

@@ -13,8 +13,6 @@ def main():
     # For loop compare with each group [1 or 2] and put different datda in different clust array
 
     for i in range(1, sheet.nrows):
-        if i == 1:
-
         if int(sheet.cell_value(i, 2)) == 1:
             clust1.append([float(sheet.cell_value(i, 0)), float(sheet.cell_value(i, 1))])
 
