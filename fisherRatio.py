@@ -2,6 +2,7 @@ import xlrd
 import statistics as stat
 import column_class
 from scipy import stats
+import pandas as pd
 def cal_ratio(fileName,classNum):
     wb = xlrd.open_workbook(fileName)
     # select the first sheet from xlsx file
@@ -15,6 +16,10 @@ def cal_ratio(fileName,classNum):
     # define a fisher ratio list for all columns with default value 0
     fisherProbDic = {}
     colObjectList = []
+    fish_ratio = []
+    fish_ratio.append("FISHER RATIO")
+    fish_ratio.append(0)
+    fish_ratio.append(0)
     # for each column sample type we calculate one fisher ratio for one column
     for i in range(3, colNum):
         #define a data list for all class
@@ -52,13 +57,17 @@ def cal_ratio(fileName,classNum):
             lumdaTop2_2 = lumdaTop2_2 + (((class_data_mean - all_data_mean) ** 2) * len(class_data[p]))
         lumdaBottom2 = len(all_data) - classNum
         lumda2 = (lumdaTop2_1-lumdaTop2_2)/lumdaBottom2
-
         fisher_ratio = lumda1/lumda2
+        fish_ratio.append(fisher_ratio)
         columnObject.setFisherRatio(fisher_ratio)
-        # print(fisher_ratio)
         colObjectList.append(columnObject)
         fisher_prob = stats.f.cdf(fisher_ratio, classNum-1, len(all_data)-classNum)
+
         # print("########################")
         # print(fisher_prob)
         fisherProbDic[i] = fisher_prob
+    # temp_df = pd.read_excel("data/setClass_file.xlsx")
+    # temp_df.loc[63] = fish_ratio
+    # temp_df.to_excel("data/output.xlsx", index=False)
+
     return fisherProbDic
