@@ -8,8 +8,8 @@ from scipy.stats import chi2
 # here the input type for  data clust1 and clust2 is matrix
 def clustResolution(clust1, clust2):
     # make the array list data clust1 and clust2 matrix
-    c1 = np.array(clust1)
-    c2 = np.array(clust2)
+    c1 = clust1
+    c2 = clust2
 
 
     # find the center points of the data

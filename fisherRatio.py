@@ -11,8 +11,9 @@ def cal_ratio(fileName,classNum):
     colNum = sheet.ncols
     rowNum = sheet.nrows
 
+
     # define a fisher ratio list for all columns with default value 0
-    Fisher_list = [0] * colNum
+    fisherProbDic = {}
     colObjectList = []
     # for each column sample type we calculate one fisher ratio for one column
     for i in range(3, colNum):
@@ -34,29 +35,30 @@ def cal_ratio(fileName,classNum):
         # calculate the first lumda sqr
         all_data_mean = stat.mean(all_data)
         lumdaTop1 = 0
-        for i in range(1, classNum+1):
-            class_data_mean = stat.mean(class_data[i])
-            lumdaTop1 = lumdaTop1 + (((class_data_mean - all_data_mean)**2)*len(class_data[i]))
+        for z in range(1, classNum+1):
+            class_data_mean = stat.mean(class_data[z])
+            lumdaTop1 = lumdaTop1 + (((class_data_mean - all_data_mean)**2)*len(class_data[z]))
         lumdaBottom1 = classNum-1
         lumda1 = lumdaTop1/lumdaBottom1
 
         lumdaTop2_1 = 0
-        for i in range(1,classNum+1):
-            for j in class_data[i]:
+        for n in range(1,classNum+1):
+            for j in class_data[n]:
                 lumdaTop2_1 = lumdaTop2_1 + (j - all_data_mean)**2
 
         lumdaTop2_2 = 0
-        for i in range(1,classNum+1):
-            class_data_mean = stat.mean(class_data[i])
-            lumdaTop2_2 = lumdaTop2_2 + ((class_data_mean - all_data_mean) ** 2) * i
+        for p in range(1,classNum+1):
+            class_data_mean = stat.mean(class_data[p])
+            lumdaTop2_2 = lumdaTop2_2 + (((class_data_mean - all_data_mean) ** 2) * len(class_data[p]))
         lumdaBottom2 = len(all_data) - classNum
         lumda2 = (lumdaTop2_1-lumdaTop2_2)/lumdaBottom2
 
         fisher_ratio = lumda1/lumda2
         columnObject.setFisherRatio(fisher_ratio)
-        print(fisher_ratio)
+        # print(fisher_ratio)
         colObjectList.append(columnObject)
         fisher_prob = stats.f.cdf(fisher_ratio, classNum-1, len(all_data)-classNum)
-        print("########################")
-        print(fisher_prob)
-    return colObjectList
+        # print("########################")
+        # print(fisher_prob)
+        fisherProbDic[i] = fisher_prob
+    return fisherProbDic
