@@ -1,6 +1,7 @@
 import xlrd
 import statistics as stat
 import column_class
+from scipy import stats
 def cal_ratio(fileName,classNum):
     wb = xlrd.open_workbook(fileName)
     # select the first sheet from xlsx file
@@ -35,7 +36,7 @@ def cal_ratio(fileName,classNum):
         lumdaTop1 = 0
         for i in range(1, classNum+1):
             class_data_mean = stat.mean(class_data[i])
-            lumdaTop1 =  lumdaTop1 + ((class_data_mean - all_data_mean)**2)*i
+            lumdaTop1 = lumdaTop1 + (((class_data_mean - all_data_mean)**2)*len(class_data[i]))
         lumdaBottom1 = classNum-1
         lumda1 = lumdaTop1/lumdaBottom1
 
@@ -55,6 +56,7 @@ def cal_ratio(fileName,classNum):
         columnObject.setFisherRatio(fisher_ratio)
         print(fisher_ratio)
         colObjectList.append(columnObject)
-    # for i in colObjectList:
-    #     print(i.ratio)
+        fisher_prob = stats.f.cdf(fisher_ratio, classNum-1, len(all_data)-classNum)
+        print("########################")
+        print(fisher_prob)
     return colObjectList
