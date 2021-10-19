@@ -3,6 +3,7 @@ import math
 import statistics
 import scipy.optimize
 import numpy as np
+import scipy.linalg as sp
 from scipy.stats import chi2
 # here is the transalter version of clust resolution from matlab to python
 # here the input type for  data clust1 and clust2 is matrix
@@ -20,7 +21,6 @@ def clustResolution(clust1, clust2):
     #SVD for ranked eigenvalues from covariance matrices
     c1_cov = np.cov(c1.T)
     c2_cov = np.cov(c2.T)
-
     eivec1, eival1, Vh1 = np.linalg.svd(c1_cov)
     eivec2, eival2, Vh2 = np.linalg.svd(c2_cov)
 
