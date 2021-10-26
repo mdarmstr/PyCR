@@ -35,8 +35,5 @@ def RunClust(variable_list,class_list,classNum):
     clust1 = clust1.transpose()
     clust2 = np.array(clust2)
     clust2 = clust2.transpose()
-    print(clust1)
-    print("#############")
-    print(clust2)
     # Call function ClustResilution to do further calculation
     return ClustResolution.clustResolution(clust1, clust2)
