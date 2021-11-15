@@ -1,15 +1,14 @@
 import operator
 import pandas as pd
 import xlrd
-import openpyxl
 import copy
 from numpy import inf
 import sys
 from scipy.sparse.linalg import svds
 import gen_clust
 import numpy as np
-from scipy.sparse import csc_matrix
 import random
+
 #set the start number and end number
 def setNumber(fisherProb,classNum):
     START_NUM = 0.9
@@ -49,14 +48,18 @@ def setNumber(fisherProb,classNum):
         temp_score = calScore(scaled_half_samples, scaled_all_samples)
         newScore = gen_clust.RunClust(temp_score, classList, 2)
         if newScore >= oldScore:
+            insert_all_value = copy_all_scaled_samples[:, (idx - DUMMY_COL_INDEX_DIFF)]
+            insert_half_value = copy_half_scaled_samples[:, (idx - DUMMY_COL_INDEX_DIFF)]
+            scaled_all_samples = np.insert(scaled_all_samples, (idx - DUMMY_COL_INDEX_DIFF - delete_diff),
+                                           insert_all_value, axis=1)
+            scaled_half_samples = np.insert(scaled_half_samples, (idx - DUMMY_COL_INDEX_DIFF - delete_diff),
+                                            insert_half_value, axis=1)
+
+        if newScore < oldScore:
             oldScore = newScore
             finalOutPutIdx.append(idx)
-            delete_diff = delete_diff +1
-        if newScore < oldScore:
-            insert_all_value = copy_all_scaled_samples[:,(idx-DUMMY_COL_INDEX_DIFF)]
-            insert_half_value = copy_half_scaled_samples[:,(idx-DUMMY_COL_INDEX_DIFF)]
-            scaled_all_samples = np.insert(scaled_all_samples,(idx-DUMMY_COL_INDEX_DIFF-delete_diff),insert_all_value,axis=1)
-            scaled_half_samples = np.insert(scaled_half_samples,(idx-DUMMY_COL_INDEX_DIFF-delete_diff),insert_half_value,axis=1)
+            delete_diff = delete_diff + 1
+
     # set threshold incase we dont have enough variables
     finalOutPutIdx = np.array(finalOutPutIdx)
     selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
@@ -77,7 +80,6 @@ def setNumber(fisherProb,classNum):
         if newScore < oldScore:
             finalOutPutIdx.remove(index)
     return finalOutPutIdx
-
 
 
 

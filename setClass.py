@@ -34,5 +34,6 @@ def setClass(fileName):
     df = pd.read_excel(fileName)
     df.insert(2,"ClassNum",classList,True)
     df.to_excel("data/setClass_file.xlsx", index=False)
-    print(classList)
+
+    return class_value_counter-1
 
