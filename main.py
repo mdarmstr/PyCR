@@ -29,6 +29,7 @@ def main():
         prob = float(hash_list[i])/200.0
         # we are only taking the ratio more than 30%
         if prob > 0.3:
+            print(prob)
             valid_idx.append(i)
     genfile(valid_idx, "data/setClass_file.xlsx")
 
