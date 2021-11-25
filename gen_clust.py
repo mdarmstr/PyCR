@@ -1,4 +1,3 @@
-import xlrd
 import ClustResolution
 import numpy as np
 import itertools

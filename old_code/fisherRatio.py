@@ -65,7 +65,7 @@ def cal_ratio(fileName,classNum):
 
         # print("########################")
         # print(fisher_prob)
-        fisherProbDic[i] = fisher_prob
+        fisherProbDic[i] = fisher_ratio
     # temp_df = pd.read_excel("data/setClass_file.xlsx")
     # temp_df.loc[63] = fish_ratio
     # temp_df.to_excel("data/output.xlsx", index=False)

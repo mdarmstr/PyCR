@@ -39,7 +39,8 @@ def main():
     an_array = [[1, 2, 3],
                 [4, 5, 6],
                 [7, 8, 9]]
-    column_one = [row[1] for row in an_array]
+    an_array = np.array(an_array)
+    column_one = an_array[:,0]
     print(column_one)
 
 

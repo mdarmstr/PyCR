@@ -5,10 +5,12 @@ import random
 import copy
 import column_class
 import statistics as stat
-import scipy.stats
-import matplotlib.pyplot as pyplot
 from scipy.stats import norm
-def gaussian_algorithm(classNum):
+import scipy.stats
+from decimal import Decimal
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+def gaussian_algorithm(classNum=2):
     sample_matrix, class_list = getValFromFile("data/setClass_file.xlsx")
     half_rand_matrix, half_rand_class_list, half_rand_variable_idx_list = selectHalfRandom(sample_matrix,class_list)
     classNum_list = []
@@ -24,22 +26,28 @@ def gaussian_algorithm(classNum):
 
     start_num_list = []
     end_num_list = []
-    true_m, true_mMinusH, true_mPlusH = mean_confidence_interval(true_fisherRatio, 0.95)
-
-    null_m, null_mMinusH, null_mPlusH = mean_confidence_interval(null_fisherRatio, 0.95)
-
+    true_m, true_mMinusH, startNum = mean_confidence_interval(true_fisherRatio, 0.95)
+    true_fisher_mean = np.mean(true_fisherRatio)
+    true_fisher_std = np.std(true_fisherRatio)
+    null_fisher_mean = np.mean(null_fisherRatio)
+    null_fisher_std = np.std(null_fisherRatio)
+    endNum = get_intersection(true_fisher_mean,null_fisher_mean,true_fisher_std,null_fisher_std)
+    endNum = endNum[1]
+    # null_m, null_mMinusH, null_mPlusH = mean_confidence_interval(null_fisherRatio, 0.95)
+    if endNum > startNum:
+        print("##############################   OHHHHHHHH  NOOOO")
     for trueIdx in range(len(true_fisherRatio)):
-        if true_fisherRatio[trueIdx] > true_mPlusH:
+        if true_fisherRatio[trueIdx] > startNum:
             start_num_list.append(half_rand_variable_idx_list[trueIdx])
-        elif null_mPlusH < true_fisherRatio[trueIdx] < true_mPlusH:
+        elif endNum < true_fisherRatio[trueIdx] < startNum:
             end_num_list.append(half_rand_variable_idx_list[trueIdx])
-
+    x = np.linspace(-5, 9, 10000)
+    plot1 = plt.plot(x, norm.pdf(x, true_fisher_mean, true_fisher_std))
+    plot2 = plt.plot(x, norm.pdf(x, null_fisher_mean, null_fisher_std))
+    plot3 = plt.plot(endNum, norm.pdf(endNum, true_fisher_mean, true_fisher_std), 'o')
+    plt.show()
     print(start_num_list)
-    print(end_num_list)
-    return start_num_list,end_num_list,half_rand_matrix
-
-
-
+    return start_num_list,end_num_list
 
 
 
@@ -143,10 +151,23 @@ def cal_fish_ratio(sample_list,class_list,classNum):
     return fish_ratio
 
 def mean_confidence_interval(data, confidence):
+    confidence = Decimal(str(confidence))
+    half_confi = Decimal('0.5')
+    oneside_confidence = (confidence -half_confi)*Decimal(2)
+    oneside_confidence = float(oneside_confidence)
     a = 1.0 * np.array(data)
     n = len(a)
     m, se = np.mean(a), scipy.stats.sem(a)
-    h = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1)
+    h = se * scipy.stats.t.ppf((1 + oneside_confidence) / 2., n-1)
     return m, m-h, m+h
+
+def get_intersection(m1,m2,std1,std2):
+    a = 1 / (2 * std1 ** 2) - 1 / (2 * std2 ** 2)
+    b = m2 / (std2 ** 2) - m1 / (std1 ** 2)
+    c = m1 ** 2 / (2 * std1 ** 2) - m2 ** 2 / (2 * std2 ** 2) - np.log(std2 / std1)
+
+
+    return np.roots([a, b, c])
+
 
 gaussian_algorithm(2)

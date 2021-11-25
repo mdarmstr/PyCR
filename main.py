@@ -1,6 +1,4 @@
 import numpy as np
-
-import fisherRatio
 import setClass
 import calculateScore
 import xlrd
@@ -11,20 +9,22 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn import preprocessing
+import genStartEndNum2
 
 def main():
     classNum = setClass.setClass('data/CasevControl.xlsx')
-    # print(classNum)
-    fisher_prob = fisherRatio.cal_ratio('data/setClass_file.xlsx',classNum)
+    startNum, endNum = genStartEndNum2.gaussian_algorithm(classNum)
     hash_list = [0]*1500
     for i in range(200):
         print("###########################################     "+str(i))
-        return_idx = newScore.setNumber(fisher_prob, classNum)
+        return_idx = newScore.setNumber(classNum,startNum,endNum)
+        print(return_idx)
         for j in return_idx:
             hash_list[j] = hash_list[j]+1
     valid_idx = []
     for i in range(len(hash_list)):
         prob = float(hash_list[i])/200.0
+        print(prob)
         if prob > 0.3:
             valid_idx.append(i)
     genfile(valid_idx, "data/setClass_file.xlsx")

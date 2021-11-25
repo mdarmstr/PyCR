@@ -5,34 +5,43 @@ import copy
 from numpy import inf
 import sys
 from scipy.sparse.linalg import svds
+import fisherRatio_in
 import gen_clust
 import numpy as np
 import random
 
 #set the start number and end number
-def setNumber(fisherProb,classNum):
+def setNumber(classNum,startNum,endNum):
     START_NUM = 0.9
     END_NUM = 0.5
     #because the index in excel and the index in matrix are different(the index in matrix do not have class, sample name, and class number column)
     DUMMY_COL_INDEX_DIFF = 2
-    sorted_fisherProb = sorted(fisherProb.items(), key=operator.itemgetter(1), reverse=True)
+
+    # get sample matrix from file, column is variable and row is sample
+    allSampleList, classList = getValFromFile('data/setClass_file.xlsx')
+    allSampleList = np.array(allSampleList)
+    half_random_sample, rand_idx_list = selectHalfRandom(allSampleList)
+    half_random_class_list = []
+    for i in rand_idx_list:
+        half_random_class_list.append(classList[i])
+    fisherRatio = fisherRatio_in.cal_ratio(half_random_sample, half_random_class_list, classNum)
+    sorted_fisherProb = sorted(fisherRatio.items(), key=operator.itemgetter(1), reverse=True)
+
     # print(sorted_fisherProb)
+    allSampleList_idx = []
     startNumList = []
     endNumList = []
-    allSampleList_idx = []
+
     for i in sorted_fisherProb:
-        if i[1] > 0.9:
+        if i[1] > startNum:
             startNumList.append(i[0])
-        if i[1]< 0.9 and i[1]>0.5:
+        if i[1]< startNum and i[1]>endNum:
             endNumList.append(i[0])
 
     for j in sorted_fisherProb:
         allSampleList_idx.append(j[0])
 
-    # get sample matrix from file, column is variable and row is sample
-    allSampleList,classList = getValFromFile('data/setClass_file.xlsx')
-    allSampleList = np.array(allSampleList)
-    half_random_sample,rand_idx_list = selectHalfRandom(allSampleList)
+
     scaled_half_samples,half_mean,half_svd = scale_half_data(half_random_sample)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
     temp_score = calScore(scaled_half_samples, scaled_all_samples)
