@@ -72,13 +72,15 @@ def setNumber(classNum,startNum,endNum):
     # set threshold incase we dont have enough variables
     finalOutPutIdx = np.array(finalOutPutIdx)
     selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
-    if selected_all_matrix.shape[1] < 2:
+    if selected_all_matrix.shape[1] < 3:
         finalOutPutIdx = startNumList[:10]
 
     # calculate the old score with all pre-selected variables
-    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
-    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
-    oldScore = calScore(selected_half_matrix, selected_all_matrix)
+    finalOutPutIdx = np.array(finalOutPutIdx)
+    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
+    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
+    temp_score = calScore(selected_half_matrix, selected_all_matrix)
+    oldScore = gen_clust.RunClust(temp_score, classList, 2)
     finalOutPutIdx = list(finalOutPutIdx)
 
     # add the variable into the selected variable list
