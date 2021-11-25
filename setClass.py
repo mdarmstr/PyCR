@@ -7,17 +7,12 @@ def setClass(fileName):
     #define a class dictionary for later use
     class_dict = {}
     class_value_counter = 1
-
     # define a class list to add column in our excel file
     classList = []
-
     # save the first class item into our class dictionary
     class_dict[sheet.cell_value(1, 1)] = class_value_counter
     classList.append(class_value_counter)
     class_value_counter = class_value_counter + 1
-
-
-
     # check all the item and add new class into class dictionary
     for i in range(2, sheet.nrows):
         key = sheet.cell_value(i, 1)

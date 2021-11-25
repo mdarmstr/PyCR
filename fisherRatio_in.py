@@ -37,11 +37,5 @@ def cal_ratio(rand_sample_list,class_list,classNum):
         lumdaBottom2 = len(all_data) - classNum
         lumda2 = (lumdaTop2_1-lumdaTop2_2)/lumdaBottom2
         fisher_ratio = lumda1/lumda2
-        # print("########################")
-        # print(fisher_prob)
         fisherRatioDic[i] = fisher_ratio
-    # temp_df = pd.read_excel("data/setClass_file.xlsx")
-    # temp_df.loc[63] = fish_ratio
-    # temp_df.to_excel("data/output.xlsx", index=False)
-
     return fisherRatioDic

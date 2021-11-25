@@ -12,36 +12,33 @@ import random
 
 #set the start number and end number
 def setNumber(classNum,startNum,endNum):
-    START_NUM = 0.9
-    END_NUM = 0.5
     #because the index in excel and the index in matrix are different(the index in matrix do not have class, sample name, and class number column)
     DUMMY_COL_INDEX_DIFF = 2
 
     # get sample matrix from file, column is variable and row is sample
     allSampleList, classList = getValFromFile('data/setClass_file.xlsx')
     allSampleList = np.array(allSampleList)
+    #get the half randomly selected sample and calculate the fisher ration
     half_random_sample, rand_idx_list = selectHalfRandom(allSampleList)
     half_random_class_list = []
     for i in rand_idx_list:
         half_random_class_list.append(classList[i])
     fisherRatio = fisherRatio_in.cal_ratio(half_random_sample, half_random_class_list, classNum)
-    sorted_fisherProb = sorted(fisherRatio.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_fisherRatio = sorted(fisherRatio.items(), key=operator.itemgetter(1), reverse=True)
 
-    # print(sorted_fisherProb)
+    # get the start variable list and end variable list by startNum and end Num
     allSampleList_idx = []
     startNumList = []
     endNumList = []
-
-    for i in sorted_fisherProb:
+    for i in sorted_fisherRatio:
         if i[1] > startNum:
             startNumList.append(i[0])
         if i[1]< startNum and i[1]>endNum:
             endNumList.append(i[0])
-
-    for j in sorted_fisherProb:
+    for j in sorted_fisherRatio:
         allSampleList_idx.append(j[0])
 
-
+    #calculate the old score with all the variables inside
     scaled_half_samples,half_mean,half_svd = scale_half_data(half_random_sample)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
     temp_score = calScore(scaled_half_samples, scaled_all_samples)
@@ -51,6 +48,10 @@ def setNumber(classNum,startNum,endNum):
     copy_half_scaled_samples = copy.deepcopy(scaled_half_samples)
     delete_diff = 0
 
+    # get rid of the variable form teh start variable list and calculate the score again
+    # compare with the the old score
+    # if the new score is lower than the old score, we need save the variable in selected variable list
+    # if the new score is higher than the old score, we need put the variable back
     for idx in startNumList:
         scaled_all_samples = np.delete(scaled_all_samples,[(idx-DUMMY_COL_INDEX_DIFF-delete_diff)],1)
         scaled_half_samples = np.delete(scaled_half_samples,[(idx-DUMMY_COL_INDEX_DIFF-delete_diff)],1)
@@ -63,7 +64,6 @@ def setNumber(classNum,startNum,endNum):
                                            insert_all_value, axis=1)
             scaled_half_samples = np.insert(scaled_half_samples, (idx - DUMMY_COL_INDEX_DIFF - delete_diff),
                                             insert_half_value, axis=1)
-
         if newScore < oldScore:
             oldScore = newScore
             finalOutPutIdx.append(idx)
@@ -74,8 +74,17 @@ def setNumber(classNum,startNum,endNum):
     selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
     if selected_all_matrix.shape[1] < 2:
         finalOutPutIdx = startNumList[:10]
+
+    # calculate the old score with all pre-selected variables
+    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
+    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
+    oldScore = calScore(selected_half_matrix, selected_all_matrix)
     finalOutPutIdx = list(finalOutPutIdx)
 
+    # add the variable into the selected variable list
+    # compare with the the old score
+    # if the new score is lower than the old score, we need put the variable back
+    # if the new score is higher than the old score, we need save the variable in selected variable list
     for index in endNumList:
         finalOutPutIdx.append(index)
         finalOutPutIdx = np.array(finalOutPutIdx)
@@ -90,8 +99,7 @@ def setNumber(classNum,startNum,endNum):
             finalOutPutIdx.remove(index)
     return finalOutPutIdx
 
-
-
+# get the list of samples from the original file
 def getValFromFile(fileName):
     wb = xlrd.open_workbook(fileName)
     # select the first sheet from xlsx file
@@ -109,6 +117,7 @@ def getValFromFile(fileName):
         samples.append(temp_col1)
     return samples,sample_class
 
+# scale all data with provide mean and std
 def scale_all_data(samples,mean,std):
     functionTop = np.subtract(samples, mean)
     scaled_samples = np.divide(functionTop, std)
