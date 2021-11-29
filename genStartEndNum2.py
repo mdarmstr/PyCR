@@ -1,14 +1,11 @@
-import xlrd
-import pandas as pd
 import numpy as np
 import random
 import copy
 import statistics as stat
-from decimal import Decimal
 from statistics import NormalDist
 
-def gaussian_algorithm(classNum=2):
-    sample_matrix, class_list = getValFromFile("data/setClass_file.xlsx")
+def gaussian_algorithm(classNum,class_list,valList):
+    sample_matrix = np.array(valList)
     k = 0
     true_means = []
     null_means = []
@@ -39,26 +36,8 @@ def gaussian_algorithm(classNum=2):
     null_fisher_std = np.std(null_means)
     startNum = NormalDist(mu=true_fisher_mean,sigma=true_fisher_std).inv_cdf(0.99)
     endNum = NormalDist(mu=null_fisher_mean, sigma=null_fisher_std).inv_cdf(0.05)
-    return startNum,endNum
+    return startNum, endNum
 
-# get the list of samples from the original file
-def getValFromFile(fileName):
-    wb = xlrd.open_workbook(fileName)
-    # select the first sheet from xlsx file
-    sheet = wb.sheet_by_index(0)
-    sample_col = sheet.col_values(0)
-    df = pd.DataFrame(sample_col[1:], columns=[sample_col[0]])
-    sample_class = sheet.col_values(2)
-    sample_class = sample_class[1:]
-    samples = []
-    # add all the variables in clust into the variables list
-    for i in range(1, sheet.nrows):
-        temp_col1 = []
-        for z in range(3, sheet.ncols):
-            temp_col1.append(float(sheet.cell_value(i, z)))
-        samples.append(temp_col1)
-    samples = np.array(samples)
-    return samples, sample_class
 
 # randomly get half sample, half variable matrix
 def selectHalfRandom(sample_list,class_list):
@@ -71,6 +50,7 @@ def selectHalfRandom(sample_list,class_list):
         sample_idx_list.append(i)
     total_sample_num = len(sample_list)
     half_sample_num = total_sample_num//2
+
     # get the random half variables idx
     for j in range(len(sample_list[0])):
         variable_idx_list.append(j)
@@ -84,8 +64,7 @@ def selectHalfRandom(sample_list,class_list):
         rand_sample_list.append(sample_list[idx])
         rand_class_list.append(class_list[idx])
     random_sample_matrix = np.array(rand_sample_list)
-    final_rand_matrix = random_sample_matrix[:,rand_variable_list]
-
+    final_rand_matrix = random_sample_matrix[:, rand_variable_list]
     return final_rand_matrix, rand_class_list
 
 def cal_fish_ratio(sample_list,class_list,classNum):
@@ -126,13 +105,3 @@ def cal_fish_ratio(sample_list,class_list,classNum):
         fish_ratio.append(fisher_ratio)
     fish_ratio = np.nan_to_num(fish_ratio, nan=(10 ** -12))
     return fish_ratio
-
-# def get_intersection(m1,m2,std1,std2):
-#     a = 1 / (2 * std1 ** 2) - 1 / (2 * std2 ** 2)
-#     b = m2 / (std2 ** 2) - m1 / (std1 ** 2)
-#     c = m1 ** 2 / (2 * std1 ** 2) - m2 ** 2 / (2 * std2 ** 2) - np.log(std2 / std1)
-#
-#
-#     return np.roots([a, b, c])
-#
-#

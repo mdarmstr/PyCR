@@ -1,6 +1,4 @@
 import operator
-import pandas as pd
-import xlrd
 import copy
 from numpy import inf
 import sys
@@ -10,20 +8,15 @@ import gen_clust
 import numpy as np
 import random
 
-#set the start number and end number
-def setNumber(classNum,startNum,endNum):
-    #because the index in excel and the index in matrix are different(the index in matrix do not have class, sample name, and class number column)
-    DUMMY_COL_INDEX_DIFF = 2
-
+def setNumber(classNum, classList, allSampleList, startNum, endNum):
     # get sample matrix from file, column is variable and row is sample
-    allSampleList, classList = getValFromFile('data/setClass_file.xlsx')
     allSampleList = np.array(allSampleList)
     #get the half randomly selected sample and calculate the fisher ration
     half_random_sample, rand_idx_list = selectHalfRandom(allSampleList)
     half_random_class_list = []
     for i in rand_idx_list:
         half_random_class_list.append(classList[i])
-    fisherRatio = fisherRatio_in.cal_ratio(half_random_sample, half_random_class_list, classNum)
+    fisherRatio = fisherRatio_in.cal_ratio(half_random_sample,rand_idx_list, half_random_class_list, classNum)
     sorted_fisherRatio = sorted(fisherRatio.items(), key=operator.itemgetter(1), reverse=True)
 
     # get the start variable list and end variable list by startNum and end Num
@@ -37,7 +30,6 @@ def setNumber(classNum,startNum,endNum):
             endNumList.append(i[0])
     for j in sorted_fisherRatio:
         allSampleList_idx.append(j[0])
-
     #calculate the old score with all the variables inside
     scaled_half_samples,half_mean,half_svd = scale_half_data(half_random_sample)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
@@ -53,16 +45,16 @@ def setNumber(classNum,startNum,endNum):
     # if the new score is lower than the old score, we need save the variable in selected variable list
     # if the new score is higher than the old score, we need put the variable back
     for idx in startNumList:
-        scaled_all_samples = np.delete(scaled_all_samples,[(idx-DUMMY_COL_INDEX_DIFF-delete_diff)],1)
-        scaled_half_samples = np.delete(scaled_half_samples,[(idx-DUMMY_COL_INDEX_DIFF-delete_diff)],1)
+        scaled_all_samples = np.delete(scaled_all_samples, [(idx-delete_diff)], 1)
+        scaled_half_samples = np.delete(scaled_half_samples, [(idx-delete_diff)], 1)
         temp_score = calScore(scaled_half_samples, scaled_all_samples)
         newScore = gen_clust.RunClust(temp_score, classList, 2)
         if newScore >= oldScore:
-            insert_all_value = copy_all_scaled_samples[:, (idx - DUMMY_COL_INDEX_DIFF)]
-            insert_half_value = copy_half_scaled_samples[:, (idx - DUMMY_COL_INDEX_DIFF)]
-            scaled_all_samples = np.insert(scaled_all_samples, (idx - DUMMY_COL_INDEX_DIFF - delete_diff),
+            insert_all_value = copy_all_scaled_samples[:, (idx)]
+            insert_half_value = copy_half_scaled_samples[:, (idx)]
+            scaled_all_samples = np.insert(scaled_all_samples, (idx - delete_diff),
                                            insert_all_value, axis=1)
-            scaled_half_samples = np.insert(scaled_half_samples, (idx - DUMMY_COL_INDEX_DIFF - delete_diff),
+            scaled_half_samples = np.insert(scaled_half_samples, (idx - delete_diff),
                                             insert_half_value, axis=1)
         if newScore < oldScore:
             oldScore = newScore
@@ -71,14 +63,14 @@ def setNumber(classNum,startNum,endNum):
 
     # set threshold incase we dont have enough variables
     finalOutPutIdx = np.array(finalOutPutIdx)
-    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
+    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]
     if selected_all_matrix.shape[1] < 3:
         finalOutPutIdx = startNumList[:10]
 
     # calculate the old score with all pre-selected variables
     finalOutPutIdx = np.array(finalOutPutIdx)
-    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
-    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx.astype(int) - DUMMY_COL_INDEX_DIFF)]
+    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]
+    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx.astype(int))]
     temp_score = calScore(selected_half_matrix, selected_all_matrix)
     oldScore = gen_clust.RunClust(temp_score, classList, 2)
     finalOutPutIdx = list(finalOutPutIdx)
@@ -90,8 +82,8 @@ def setNumber(classNum,startNum,endNum):
     for index in endNumList:
         finalOutPutIdx.append(index)
         finalOutPutIdx = np.array(finalOutPutIdx)
-        selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
-        selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx - DUMMY_COL_INDEX_DIFF)]
+        selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx)]
+        selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx)]
         finalOutPutIdx = list(finalOutPutIdx)
         temp_score = calScore(selected_half_matrix, selected_all_matrix)
         newScore = gen_clust.RunClust(temp_score, classList, 2)
@@ -100,24 +92,6 @@ def setNumber(classNum,startNum,endNum):
         if newScore < oldScore:
             finalOutPutIdx.remove(index)
     return finalOutPutIdx
-
-# get the list of samples from the original file
-def getValFromFile(fileName):
-    wb = xlrd.open_workbook(fileName)
-    # select the first sheet from xlsx file
-    sheet = wb.sheet_by_index(0)
-    sample_col = sheet.col_values(0)
-    df = pd.DataFrame(sample_col[1:], columns=[sample_col[0]])
-    sample_class = sheet.col_values(2)
-    sample_class = sample_class[1:]
-    samples = []
-    # add all the variables in clust into the variables list
-    for i in range(1, sheet.nrows):
-        temp_col1 = []
-        for z in range(3, sheet.ncols):
-            temp_col1.append(float(sheet.cell_value(i, z)))
-        samples.append(temp_col1)
-    return samples,sample_class
 
 # scale all data with provide mean and std
 def scale_all_data(samples,mean,std):
