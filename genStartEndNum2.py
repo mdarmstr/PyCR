@@ -11,7 +11,10 @@ def gaussian_algorithm(classNum,class_list,valList):
     null_means = []
     while k < 30:
         # get the half random sample and half random variables list
-        half_rand_matrix, half_rand_class_list = selectHalfRandom(sample_matrix, class_list)
+        half_rand_matrix,sample_ind_list = selectHalfRandom(sample_matrix)
+        half_rand_class_list = []
+        for z in sample_ind_list:
+            half_rand_class_list.append(class_list[z])
         classNum_list = []
         for i in range(classNum):
             classNum_list.append(i + 1)
@@ -40,32 +43,20 @@ def gaussian_algorithm(classNum,class_list,valList):
 
 
 # randomly get half sample, half variable matrix
-def selectHalfRandom(sample_list,class_list):
-    sample_idx_list = []
+def selectHalfRandom(sample_list):
+    idx_list = []
     rand_sample_list = []
-    rand_class_list = []
-    variable_idx_list = []
-    # get the random half sample idx
     for i in range(len(sample_list)):
-        sample_idx_list.append(i)
-    total_sample_num = len(sample_list)
-    half_sample_num = total_sample_num//2
+        idx_list.append(i)
 
-    # get the random half variables idx
-    for j in range(len(sample_list[0])):
-        variable_idx_list.append(j)
-    total_variable_num = len(sample_list[0])
-    half_variable_num = total_variable_num//2
+    total_num = len(sample_list)
+    half_num = total_num//2
 
-    rand_idx_list = random.sample(list(sample_idx_list), half_sample_num)
-    rand_variable_list = random.sample(list(variable_idx_list),half_variable_num)
-
+    rand_idx_list = random.sample(list(idx_list),half_num)
     for idx in rand_idx_list:
         rand_sample_list.append(sample_list[idx])
-        rand_class_list.append(class_list[idx])
-    random_sample_matrix = np.array(rand_sample_list)
-    final_rand_matrix = random_sample_matrix[:, rand_variable_list]
-    return final_rand_matrix, rand_class_list
+
+    return rand_sample_list,rand_idx_list
 
 def cal_fish_ratio(sample_list,class_list,classNum):
     # define a fisher ratio list for all columns with default value 0

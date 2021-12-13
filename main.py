@@ -1,54 +1,102 @@
-import setClass
+import numpy as np
 import xlrd
 import newScore
 import pandas as pd
 import genStartEndNum2
+from sklearn import svm
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+from sklearn import metrics
+from sklearn.decomposition import PCA
+import sys
+from numpy import inf
+from sklearn.model_selection import train_test_split
 
-def main():
+def main(isexternal,howMuchSplit):
     # get the class list
     classList = getValFromFileByCols('coffee_data/classcoffe.xlsx')
+    classMatrix = np.array(classList)
     # get the max class number as classNum
     classNum = max(classList)
-    # get the variable lust
-    valList = getValFromFileByRows('coffee_data/coffe.xlsx')
+    # get the variable list
+    sampleList = getValFromFileByRows('coffee_data/coffe.xlsx')
+    sampleMatrix = np.array(sampleList)
+    ## is there is not enough samples to do the external validation no matter what the user says isexternal will be false
+    if len(sampleList)<50:
+        isexternal = False
+    if isexternal:
+        sampleList, external_validation, classList, external_class = selectRandom(sampleList, classList,howMuchSplit)
+
     # get the start number and the end number
-    startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, valList)
-    print(startNum)
-    print(endNum)
+    startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, sampleList)
     # create a hash table to take count for the show up times for each variables
     hash_list = [0]*1500
-    for i in range(1):
+    for k in range(3):
+        printStr = "###################################" + str(k)
+        print(printStr)
         # getting the selected index
-        return_idx = newScore.setNumber(int(classNum), classList, valList, startNum, endNum)
+        return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit)
         for j in return_idx:
             hash_list[j] = hash_list[j]+1
+
+        if k == 0:
+            valid_idx = return_idx
+        else:
+            valid_idx = []
+            # calculate the show-up ratio for each variable
+            for i in range(len(hash_list)):
+                prob = float(hash_list[i]) /float(k+1)
+                print(prob)
+                # we are only taking the ratio more than 30%
+                if prob > 0.9:
+                    valid_idx.append(i)
+
+        selectedVariables = sample_taining[:, valid_idx]
+        # Create a svm Classifier
+        clf = svm.SVC(kernel='linear', random_state=0)  # Linear Kernel
+
+        # Train the model using the training sets
+        clf.fit(selectedVariables, class_training)
+
+        # generate the roc curve
+        metrics.plot_roc_curve(clf, sample_test[:, valid_idx], class_test)
+        plt.savefig('imgs/svm'+str(k)+'.png')
+
     valid_idx = []
     # calculate the show-up ratio for each variable
     for i in range(len(hash_list)):
-        prob = float(hash_list[i])/200.0
+        prob = float(hash_list[i])/3
         # we are only taking the ratio more than 30%
         print(prob)
-        if prob > 0.8:
+        if prob > 0.9:
             valid_idx.append(i)
-    # genfile(valid_idx, "coffee_data/coffe.xlsx", "coffee_data/classcoffe.xlsx")
+
+    # generate PCA visualization
+    scale_training_sample = scale_half_data(sample_taining)
+    pca = PCA()
+    Xt = pca.fit_transform(scale_training_sample[:,valid_idx])
+    plot = plt.scatter(Xt[:, 0], Xt[:, 1], c=class_training)
+    class_label_list = []
+    for classLabel in range(1, int(classNum) + 1):
+        class_label_list.append(classLabel)
+    plt.legend(handles=plot.legend_elements()[0], labels=class_label_list)
+    plt.savefig('imgs/pca.png')
+    genfile(valid_idx, "coffee_data/coffe.xlsx" )
 
 # generate file of variables by the variable index
-def genfile(indexList, fileName, classFileName):
-    wb = xlrd.open_workbook(classFileName)
+def genfile(indexList, fileName):
+    wb = xlrd.open_workbook(fileName)
     # select the first sheet from xlsx file
     sheet = wb.sheet_by_index(0)
-    sample_col = sheet.col_values(0)
-    df = pd.DataFrame(sample_col[1:], columns=[sample_col[0]])
-    class_col =sheet.col_values(2)
-    class_name=sheet.col_values(1)
-    df.insert(1, class_name[0], class_name[1:], True)
-    df.insert(2,class_col[0],class_col[1:],True)
-    loc_counter = 3
-    for i in indexList:
-        tem_col = sheet.col_values(i)
-        df.insert(loc_counter,tem_col[0],tem_col[1:],True)
-        loc_counter = loc_counter + 1
-    df.to_excel("data/finalOutput.xlsx", index=False)
+
+    first_col = sheet.col_values(indexList[0])
+    df = pd.DataFrame(first_col)
+    for i in range(1,len(indexList)):
+        col = sheet.col_values(indexList[i])
+        new_df = pd.DataFrame(col)
+        df = pd.concat([df,new_df],axis=1)
+
+    df.to_excel("coffee_data/finalOutput.xlsx", index=False,header=None)
 
 # get the list of samples from the original file
 def getValFromFileByRows(fileName):
@@ -79,4 +127,25 @@ def getValFromFileByCols(fileName):
         return samples[0]
     else:
         return samples
-main()
+
+def scale_half_data(samples):
+    # after get all the selected variables we make them a metrix and calculate the mean
+    samples = np.array(samples)
+    samples_mean = samples.mean(axis=0)
+    samples_std = np.std(samples, axis=0)
+    np.set_printoptions(threshold=sys.maxsize)
+    functionTop = np.subtract(samples, samples_mean)
+    scaled_samples = np.divide(functionTop, samples_std)
+    scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
+    for list in scaled_samples:
+        list[list==inf] = 10**-12
+
+    return scaled_samples
+
+def selectRandom(sample_list,class_list,howMuchSplit):
+    sample_matrix = np.array(sample_list)
+    class_matrix = np.array(class_list)
+    X_train, X_test, y_train, y_test = train_test_split(sample_matrix, class_matrix, test_size=float(howMuchSplit))
+    return X_train, X_test, y_train, y_test
+
+main(True,0.5)

@@ -40,7 +40,7 @@ def main():
                 [4, 5, 6],
                 [7, 8, 9]]
     an_array = np.array(an_array)
-    column_one = an_array[:,0]
+    column_one = an_array[:,[2,1]]
     print(column_one)
 
 

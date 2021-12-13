@@ -1,7 +1,7 @@
 import numpy as np
 import statistics as stat
 
-def cal_ratio(rand_sample_list, rand_idx_list,class_list,classNum):
+def cal_ratio(rand_sample_list,class_list,classNum):
     # define a fisher ratio list for all columns with default value 0
     fisherRatioDic = {}
     colObjectList = []
