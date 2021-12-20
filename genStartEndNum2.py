@@ -3,6 +3,10 @@ import random
 import copy
 import statistics as stat
 from statistics import NormalDist
+import matplotlib.pyplot as plt
+from pylab import rcParams
+
+import scipy.stats as st
 
 def gaussian_algorithm(classNum,class_list,valList):
     sample_matrix = np.array(valList)
@@ -32,6 +36,28 @@ def gaussian_algorithm(classNum,class_list,valList):
         true_means.append(true_mean_fisher_ratio)
         null_means.append(null_mean_fisher_ratio)
         k = k + 1
+    ####################################  START GRAPH CODE ###################################
+    # generate a histogram by using mean
+    rcParams['figure.figsize'] = 10, 10
+    plt.hist(true_means, density=True, label="true fisher mean")
+    plt.ylabel("Probability")
+    plt.xlabel("Mean")
+    mn, mx = plt.xlim()
+    plt.xlim(mn, mx)
+    kde_xs = np.linspace(mn, mx, 300)
+    kde = st.gaussian_kde(true_means)
+    plt.plot(kde_xs, kde.pdf(kde_xs), label="PDF")
+    plt.hist(null_means, density=True, label=" null fihser mean")
+    plt.ylabel("Probability")
+    plt.xlabel("Mean")
+    mn, mx = plt.xlim()
+    plt.xlim(mn, mx)
+    kde_xs = np.linspace(mn, mx, 300)
+    kde = st.gaussian_kde(null_means)
+    plt.plot(kde_xs, kde.pdf(kde_xs), label="PDF")
+    plt.tight_layout()
+    plt.savefig('imgs/FisherMean.png')
+    ####################################  END GRAPH CODE ###################################
 
     true_fisher_mean = np.mean(true_means)
     true_fisher_std = np.std(true_means)
