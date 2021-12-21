@@ -5,6 +5,7 @@ import statistics as stat
 from statistics import NormalDist
 import matplotlib.pyplot as plt
 from pylab import rcParams
+import scipy
 
 import scipy.stats as st
 
@@ -36,33 +37,30 @@ def gaussian_algorithm(classNum,class_list,valList):
         true_means.append(true_mean_fisher_ratio)
         null_means.append(null_mean_fisher_ratio)
         k = k + 1
-    ####################################  START GRAPH CODE ###################################
-    # generate a histogram by using mean
-    rcParams['figure.figsize'] = 10, 10
-    plt.hist(true_means, density=True, label="true fisher mean")
-    plt.ylabel("Probability")
-    plt.xlabel("Mean")
-    mn, mx = plt.xlim()
-    plt.xlim(mn, mx)
-    kde_xs = np.linspace(mn, mx, 300)
-    kde = st.gaussian_kde(true_means)
-    plt.plot(kde_xs, kde.pdf(kde_xs), label="PDF")
-    plt.hist(null_means, density=True, label=" null fihser mean")
-    plt.ylabel("Probability")
-    plt.xlabel("Mean")
-    mn, mx = plt.xlim()
-    plt.xlim(mn, mx)
-    kde_xs = np.linspace(mn, mx, 300)
-    kde = st.gaussian_kde(null_means)
-    plt.plot(kde_xs, kde.pdf(kde_xs), label="PDF")
-    plt.tight_layout()
-    plt.savefig('imgs/FisherMean.png')
-    ####################################  END GRAPH CODE ###################################
 
     true_fisher_mean = np.mean(true_means)
     true_fisher_std = np.std(true_means)
     null_fisher_mean = np.mean(null_means)
     null_fisher_std = np.std(null_means)
+    ####################################  START GRAPH CODE ###################################
+    # generate a histogram by using mean
+    x_values = np.arange(-1, 3, 0.1)
+    true_y_values = scipy.stats.norm(true_fisher_mean, true_fisher_std)
+    plt.plot(x_values, true_y_values.pdf(x_values), label= ' true gaussian')
+    null_y_values = scipy.stats.norm(null_fisher_mean, null_fisher_std)
+    plt.plot(x_values, null_y_values.pdf(x_values),label='null gaussian')
+    rcParams['figure.figsize'] = 10, 10
+    plt.hist(true_means, density=True, label="true fisher mean")
+    plt.hist(null_means, density=True, label=" null fihser mean")
+    plt.ylabel("Probability")
+    plt.xlabel("Mean")
+    plt.tight_layout()
+    plt.legend(loc='best')
+    mn, mx = plt.xlim()
+    plt.xlim(mn, mx)
+    plt.savefig('output/FisherMean.png')
+    plt.figure().clear()
+    ####################################  END GRAPH CODE ###################################
     startNum = NormalDist(mu=true_fisher_mean,sigma=true_fisher_std).inv_cdf(0.99)
     endNum = NormalDist(mu=null_fisher_mean, sigma=null_fisher_std).inv_cdf(0.05)
     return startNum, endNum

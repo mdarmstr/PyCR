@@ -4,24 +4,25 @@ import newScore
 import pandas as pd
 import genStartEndNum2
 from sklearn import svm
-import matplotlib.pyplot as plts
+import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.decomposition import PCA
 import sys
 from numpy import inf
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
+import xlsxwriter
 
 def main(isexternal,howMuchSplit):
     # get the class list
-    classList = getValFromFileByRows('test_data/class_1.xlsx')[0]
+    classList = getValFromFileByCols('test_data/class_1.xlsx')
     classMatrix = np.array(classList)
     # get the max class number as classNum
     classNum = max(classList)
     # get the variable list
     sampleList = getValFromFileByRows('test_data/test_1.xlsx')
     sampleMatrix = np.array(sampleList)
-    ## is there is not enough samples to do the external validation no matter what the user says isexternal will be false
+    ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
         isexternal = False
     if isexternal:
@@ -30,11 +31,19 @@ def main(isexternal,howMuchSplit):
     # get the start number and the end number
     startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, sampleList)
 
+    # create a file to save the generate statistical number(accuracy, sensitivity, selectivity)
+    class_wb_list = []
+    class_ws_list = []
+    class_stat_list = []
+    for classNum in range(1,int(classNum)+1):
+        new_wb = xlsxwriter.Workbook('output/class'+str(classNum)+'_stat_report.xlsx')
+        new_ws = new_wb.add_worksheet()
+        class_wb_list.append(new_wb)
+        class_ws_list.append(new_ws)
+        class_stat_list.append([])
+
     # create a hash table to take count for the show up times for each variables
     hash_list = [0]*1500
-
-    # Create a svm Classifier -> for SVM graph
-    clf = svm.SVC(kernel='linear', random_state=0)  # Linear Kernel
     for k in range(10):
         printStr = "###################################" + str(k)
         print(printStr)
@@ -42,7 +51,6 @@ def main(isexternal,howMuchSplit):
         return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit)
         for j in return_idx:
             hash_list[j] = hash_list[j]+1
-
         if k == 0:
             valid_idx = return_idx
         else:
@@ -58,12 +66,37 @@ def main(isexternal,howMuchSplit):
         selectedVariables = sample_taining[:, valid_idx]
 
         # Train the model using the training sets
+        clf = svm.SVC(kernel='linear', random_state=0)
         clf.fit(selectedVariables, class_training)
+        class_pred = clf.predict(sampleList[:, valid_idx])
+        classofic_report = classification_report(classList, class_pred)
+        report_lines = classofic_report.split('\n')
+        report_lines = report_lines[2:]
+        for c in range(0,classNum):
+            stat_num = report_lines[c].split(' ')
+            stat_num = [i for i in stat_num if i != ""]
+            class_stat_list[c].append(stat_num[1:])
         # generate the roc curve
-        metrics.plot_roc_curve(clf, sample_test[:, valid_idx], class_test)
-        # get statistical number
+        fpr, tpr, _ = metrics.roc_curve(classList, class_pred, pos_label=2)
+        plt.plot(fpr, tpr)
+    plt.savefig('output/roc_20_iteration.png')
+    plt.figure().clear()
+    row = 0
+    for c in range(classNum):
+        class_ws_list[c].write(row, 0, 'selectivity')
+        class_ws_list[c].write(row, 1, 'sensitivity')
+        class_ws_list[c].write(row, 2, 'accuracy')
 
-    plt.savefig('imgs/svm200.png')
+    for c in range(classNum):
+        row = 1
+        for stat in class_stat_list[c]:
+            class_ws_list[c].write(row,0,stat[0])
+            class_ws_list[c].write(row,1,stat[1])
+            class_ws_list[c].write(row,2,stat[2])
+            row = row +1
+
+    for wb in class_wb_list:
+        wb.close()
 
     valid_idx = []
     # calculate the show-up ratio for each variable
@@ -92,49 +125,85 @@ def main(isexternal,howMuchSplit):
         for classLabel in range(1, int(classNum) + 1):
             external_class_label_list.append('external ' + str(classLabel))
         plt.legend(handles=plot.legend_elements()[0], labels=external_class_label_list)
-    plt.savefig('imgs/pca.png')
-    genfile(valid_idx, "coffee_data/coffe.xlsx")
+    plt.savefig('output/pca.png')
+    plt.figure().clear()
+    # genfile(valid_idx, "coffee_data/coffe.xlsx")
     # generate ROC for external validation and selected variables
     if isexternal:
         # Create a svm Classifier
         clf = svm.SVC(kernel='linear', random_state=0)  # Linear Kernel
 
         # Train the model using the training sets
-        clf.fit(sampleList[:,valid_idx], classList)
-
+        clf.fit(sampleList[:, valid_idx], classList)
         # generate the roc curve
-        metrics.plot_roc_curve(clf, external_validation[:, valid_idx], external_class)
-        plt.savefig('imgs/svm_external.png')
+        class_pred = clf.predict(external_validation[:, valid_idx])
+        fpr, tpr, _ = metrics.roc_curve(external_class, class_pred, pos_label=2)
+        plt.plot(fpr, tpr)
+        plt.savefig('output/roc_external.png')
+
     # generate 4 SVM graph
-    # graph 1: training SVM without feature selection
-    clf_train_noFS = svm.SVC(kernel='linear', random_state=0)
-    clf_train_noFS.fit(sampleList,classList)
+    # graph 1: training without feature selection
+    scaled_sampleList = scale_half_data(sampleList)
     pca_train_noFS = PCA()
-    Xt = pca_train_noFS.fit_transform(sampleList)
+    Xt = pca_train_noFS.fit_transform(scaled_sampleList)
     plot_train_noFS = plt.scatter(Xt[:, 0], Xt[:, 1], c=classList, marker='P')
     plt.legend(handles=plot_train_noFS.legend_elements()[0], labels=class_label_list)
-    plt.savefig('imgs/SVMTrainNoFS.png')
+    plt.savefig('output/PCATrainNoFS.png')
     plt.figure().clear()
-    # graph 2: validation SVM without feature selection
+    # generate predict ROC
+    clf_train_noFS = svm.SVC(kernel='linear', random_state=0)
+    clf_train_noFS.fit(sampleList, classList)
+    class_pred = clf_train_noFS.predict(sampleList)
+    fpr, tpr, _ = metrics.roc_curve(classList,  class_pred, pos_label=2)
+    plt.plot(fpr, tpr)
+    plt.savefig('output/rocTrainNoFS.png')
+    plt.figure().clear()
+
+    # graph 2: validation without feature selection
+    scaled_externalList = scale_half_data(external_validation)
     pca_vali_noFS = PCA()
-    Xt = pca_vali_noFS.fit_transform(external_validation)
+    Xt = pca_vali_noFS.fit_transform(scaled_externalList)
     plot_vali_noFS = plt.scatter(Xt[:, 0], Xt[:, 1], c=external_class, marker='P')
     plt.legend(handles=plot_vali_noFS.legend_elements()[0], labels=class_label_list)
-    plt.savefig('imgs/SVMValiNoFS.png')
+    plt.savefig('output/PCAValiNoFS.png')
     plt.figure().clear()
-    # graph 2: training SVM with feature selection
+    # generate predict ROC
+    class_pred = clf_train_noFS.predict(external_validation)
+    fpr, tpr, _ = metrics.roc_curve(external_class, class_pred, pos_label=2)
+    plt.plot(fpr, tpr)
+    plt.savefig('output/rocValiNoFS.png')
+    plt.figure().clear()
+
+    # graph 3: training with feature selection
+    sclaed_selectedVariables = scale_half_data(sampleList[:, valid_idx])
     pca_train_FS = PCA()
-    Xt = pca_train_FS.fit_transform(sampleList[:, valid_idx])
+    Xt = pca_train_FS.fit_transform(sclaed_selectedVariables)
     plot_train_FS = plt.scatter(Xt[:, 0], Xt[:, 1], c=classList, marker='P')
     plt.legend(handles=plot_train_FS.legend_elements()[0], labels=class_label_list)
-    plt.savefig('imgs/SVMTrainWithFS.png')
+    plt.savefig('output/PCATrainWithFS.png')
     plt.figure().clear()
-    # graph 2: validation SVM with feature selection
+    # generate predict ROC
+    clf_train_FS = svm.SVC(kernel='linear', random_state=0)
+    clf_train_FS.fit(sampleList[:, valid_idx], classList)
+    class_pred = clf_train_FS.predict(sampleList[:, valid_idx])
+    fpr, tpr, _ = metrics.roc_curve(classList, class_pred, pos_label=2)
+    plt.plot(fpr, tpr)
+    plt.savefig('output/rocTrainFS.png')
+    plt.figure().clear()
+
+    # graph 4: validation with feature selection
+    scaled_selectedExternal = scale_half_data(external_validation[:, valid_idx])
     pca_vali_FS = PCA()
-    Xt = pca_vali_FS.fit_transform(external_validation[:, valid_idx])
+    Xt = pca_vali_FS.fit_transform(scaled_selectedExternal)
     plot_vali_FS = plt.scatter(Xt[:, 0], Xt[:, 1], c=external_class, marker='P')
     plt.legend(handles=plot_vali_FS.legend_elements()[0], labels=class_label_list)
-    plt.savefig('imgs/SVMValiWithFS.png')
+    plt.savefig('output/PCAValiWithFS.png')
+    plt.figure().clear()
+    # generate predict ROC
+    class_pred = clf_train_FS.predict(external_validation[:, valid_idx])
+    fpr, tpr, _ = metrics.roc_curve(external_class, class_pred, pos_label=2)
+    plt.plot(fpr, tpr)
+    plt.savefig('output/rocValiFS.png')
     plt.figure().clear()
     ####################################  END GRAPH CODE ###################################
 
@@ -146,11 +215,10 @@ def genfile(indexList, fileName):
 
     first_col = sheet.col_values(indexList[0])
     df = pd.DataFrame(first_col)
-    for i in range(1,len(indexList)):
+    for i in range(1, len(indexList)):
         col = sheet.col_values(indexList[i])
         new_df = pd.DataFrame(col)
-        df = pd.concat([df,new_df],axis=1)
-
+        df = pd.concat([df, new_df], axis=1)
     df.to_excel("coffee_data/finalOutput.xlsx", index=False,header=None)
 
 # get the list of samples from the original file
@@ -194,7 +262,6 @@ def scale_half_data(samples):
     scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
     for list in scaled_samples:
         list[list==inf] = 10**-12
-
     return scaled_samples
 
 def selectRandom(sample_list,class_list,howMuchSplit):
