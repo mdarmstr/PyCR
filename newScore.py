@@ -50,7 +50,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
         if newScore > oldScore:
             oldScore = newScore
 
-        if newScore < oldScore:
+        if newScore <= oldScore:
             finalOutPutIdx.append(idx)
             all_variable_idx.append(idx)
             all_variable_idx.sort()
