@@ -194,19 +194,3 @@ def calScore(rand_variable_list,all_variable_list):
     score = np.dot(all_variable_list, V)
     return score
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

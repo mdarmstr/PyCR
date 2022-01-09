@@ -15,23 +15,25 @@ def cal_ratio(rand_sample_list,class_list,classNum):
             class_data.append([])
         for z in range(len(class_list)):
             class_data[int(class_list[z])].append(all_data[z])
+        #get rid of empty class
+        class_data = [x for x in class_data if x != []]
         # Here we calculate the fisher ratio for that column
         # calculate the first lumda sqr
         all_data_mean = stat.mean(all_data)
         lumdaTop1 = 0
-        for z in range(1, classNum+1):
+        for z in range(len(class_data)):
             class_data_mean = stat.mean(class_data[z])
             lumdaTop1 = lumdaTop1 + (((class_data_mean - all_data_mean)**2)*len(class_data[z]))
         lumdaBottom1 = classNum-1
         lumda1 = lumdaTop1/lumdaBottom1
 
         lumdaTop2_1 = 0
-        for n in range(1,classNum+1):
+        for n in range(len(class_data)):
             for j in class_data[n]:
                 lumdaTop2_1 = lumdaTop2_1 + (j - all_data_mean)**2
 
         lumdaTop2_2 = 0
-        for p in range(1,classNum+1):
+        for p in range(len(class_data)):
             class_data_mean = stat.mean(class_data[p])
             lumdaTop2_2 = lumdaTop2_2 + (((class_data_mean - all_data_mean) ** 2) * len(class_data[p]))
         lumdaBottom2 = len(all_data) - classNum

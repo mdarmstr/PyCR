@@ -19,11 +19,13 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
     # get the start variable list and end variable list by startNum and end Numx
     startNumList = []
     endNumList = []
+    sorted_fisher_idx = []
     for i in sorted_fisherRatio:
         if i[1] > startNum:
             startNumList.append(i[0])
         if i[1]< startNum and i[1]>endNum:
             endNumList.append(i[0])
+        sorted_fisher_idx.append(i[0])
     #calculate the old score with all the variables inside
     scaled_half_samples,half_mean,half_svd = scale_half_data(sample_training)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
@@ -57,9 +59,8 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
 
     # set threshold incase we dont have enough variables
     finalOutPutIdx = np.array(finalOutPutIdx)
-    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]
-    if selected_all_matrix.shape[1] < 3:
-        finalOutPutIdx = startNumList[:10]
+    if len(finalOutPutIdx) < 2:
+        finalOutPutIdx = sorted_fisher_idx[10:]
 
     # calculate the old score with all pre-selected variables
     finalOutPutIdx = np.array(finalOutPutIdx)
@@ -126,20 +127,4 @@ def calScore(rand_variable_list,all_variable_list):
     V = np.transpose(V)
     score = np.dot(all_variable_list, V)
     return score
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

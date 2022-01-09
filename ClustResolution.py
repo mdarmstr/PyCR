@@ -1,9 +1,7 @@
 # Importing the statistics module
 import math
-import statistics
 import scipy.optimize
 import numpy as np
-import scipy.linalg as sp
 from scipy.stats import chi2
 # here is the transalter version of clust resolution from matlab to python
 # here the input type for  data clust1 and clust2 is matrix
