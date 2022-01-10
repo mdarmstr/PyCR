@@ -118,7 +118,7 @@ def scale_half_data(samples):
 def selectRandom(sample_list,class_list, howMuchSplit):
     sample_matrix = np.array(sample_list)
     class_matrix = np.array(class_list)
-    X_train, X_test, y_train, y_test = train_test_split(sample_matrix, class_matrix, test_size=float(howMuchSplit))
+    X_train, X_test, y_train, y_test = train_test_split(sample_matrix, class_matrix, test_size=float(howMuchSplit), stratify=class_matrix)
     return X_train, X_test, y_train, y_test
 
 def calScore(rand_variable_list,all_variable_list):

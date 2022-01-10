@@ -20,31 +20,41 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 10
+    iteration = 1
     inputDataFileName = 'test_data/data_FTIR_19C.xlsx'
     inputClassFileName = 'test_data/class_FTIR_19C.xlsx'
     # get the class list
-
     classList = getValFromFileByCols(inputClassFileName)
     classList = [int(x[0]) for x in classList]
     classMatrix = np.array(classList)
     # generate roc color
     red = Color("#dc3c40")
-    roc_colors = list(red.range_to(Color("#55a6bc"), iteration))
+    roc_colors = list(red.range_to(Color("#55a6bc"), iteration+1))
     # get the max class number as classNum
-    classNum = max(classList)
+    classNum = len(np.unique(classMatrix))
+    real_class_num = np.unique(classMatrix)
+    #trans the class
+    class_trans_dict = {}
+    for i in range(len(real_class_num)):
+        class_trans_dict[i+1] = real_class_num[i]
+    for key in class_trans_dict.keys():
+        classList = np.where(classList == class_trans_dict.get(key),key,classList)
+    classList =  classList.tolist()
     class_num_label = []
-    for i in range(1,classNum+1):
+    for i in range(1,len(real_class_num)+1):
         class_num_label.append(i)
+
+
+
     #class color
-    class_color = ["#dc3c40", "#55a6bc", 'purple', 'yellowgreen', 'wheat', 'royalblue']
-    class_label = ["o", "x", "4", "*", "+", "D"]
+    class_color = ["#dc3c40", "#55a6bc", 'purple', 'yellowgreen', 'wheat', 'royalblue','#42d7f5','#ca7cf7','#d2f77c']
+    class_label = ["o", "x", "4", "*", "+", "D", "8", "s", "p"]
     # get the variable list
     sampleList = getValFromFileByRows(inputDataFileName)
     sampleMatrix = np.array(sampleList)
     hori_index = np.arange(1, len(sampleList[0])+1)
     indice_list = np.arange(1, len(classList) + 1)
-    export_file(sampleList, classList, indice_list, hori_index, 'output/original_file.xlsx')
+    export_file(sampleList, classList, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
         isexternal = False
@@ -53,10 +63,10 @@ def main(isexternal,howMuchSplit,isMicro):
 
     # output the splited training and external variables in special format
     if isexternal:
-        export_file(sampleList, classList, indices_train, hori_index, 'output/training_variables.xlsx')
-        export_file(external_validation, external_class, indices_test, hori_index, 'output/external_variables.xlsx')
+        export_file(sampleList, classList, indices_train, hori_index, 'output/training_variables.xlsx', class_trans_dict)
+        export_file(external_validation, external_class, indices_test, hori_index, 'output/external_variables.xlsx', class_trans_dict)
     else:
-        export_file(sampleList, classList, indice_list, hori_index, 'output/training_variables.xlsx')
+        export_file(sampleList, classList, indice_list, hori_index, 'output/training_variables.xlsx', class_trans_dict)
         external_variables_wb = xlsxwriter.Workbook('output/external_variables.xlsx')
         external_variables_ws = external_variables_wb.add_worksheet()
         external_variables_ws.write(0, 0, "There is not enough samples to have external validation.")
@@ -77,7 +87,7 @@ def main(isexternal,howMuchSplit,isMicro):
     if classNum == 2 or isMicro:
         auc_table = []
     else:
-        f, axarr = plt.subplots(classNum)
+        fig, axarr = plt.subplots(classNum)
         auc_table = []
         for i in range(classNum):
             auc_table.append([])
@@ -105,6 +115,9 @@ def main(isexternal,howMuchSplit,isMicro):
         clf = svm.SVC(kernel='linear', random_state=0, probability=True)
         clf.fit(selectedVariables, class_training)
         class_pred = clf.predict(sample_test[:, valid_idx])
+        print(class_test)
+        print(class_pred)
+        return
         classofic_report = classification_report(class_test, class_pred)
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
@@ -165,11 +178,11 @@ def main(isexternal,howMuchSplit,isMicro):
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
         plt.title('Roc_'+str(k+1)+'_iterations')
         plt.rcParams.update({'font.size': 21})
-    plt.savefig('output/roc_iterations.png')
+
+    plt.savefig('output/roc_'+str(k)+'iterations.png')
     plt.figure().clear()
 
     ## save all the auc number in to list
-
     auc_wb = xlsxwriter.Workbook('output/auc_report.xlsx')
     if classNum ==2 or isMicro:
         auc_row = 0
@@ -190,10 +203,10 @@ def main(isexternal,howMuchSplit,isMicro):
     # generate file for selected training and selected validation in special format
     export_vali_index = [x+1 for x in valid_idx]
     if isexternal:
-        export_file(sampleList[:,valid_idx], classList, indices_train, export_vali_index, 'output/selected_training_variables.xlsx')
-        export_file(external_validation[:,valid_idx], external_class, indices_test, export_vali_index, 'output/selected_external_variables.xlsx')
+        export_file(sampleList[:,valid_idx], classList, indices_train, export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
+        export_file(external_validation[:,valid_idx], external_class, indices_test, export_vali_index, 'output/selected_external_variables.xlsx', class_trans_dict)
     else:
-        export_file(sampleList[:,valid_idx], classList,indice_list,export_vali_index, 'output/selected_training_variables.xlsx')
+        export_file(sampleList[:,valid_idx], classList,indice_list,export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
         external_variables_wb = xlsxwriter.Workbook('output/selected_external_variables.xlsx')
         external_variables_ws = external_variables_wb.add_worksheet()
         external_variables_ws.write(0, 0, "There is not enough samples to have external validation.")
@@ -411,7 +424,7 @@ def selectRandom(sample_list,class_list,howMuchSplit):
     indices = np.arange(1,len(class_list)+1)
     sample_matrix = np.array(sample_list)
     class_matrix = np.array(class_list)
-    X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(sample_matrix, class_matrix, indices, test_size=float(howMuchSplit))
+    X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(sample_matrix, class_matrix, indices, test_size=float(howMuchSplit), stratify=class_matrix)
     return X_train, X_test, y_train, y_test, indices_train, indices_test
 
 def confident_ellipse(score1, score2, confident_interval = 0.95):
@@ -437,10 +450,14 @@ def confident_ellipse(score1, score2, confident_interval = 0.95):
         x_ellipse.append(x_temp)
     return x_ellipse, y_ellipse
 
-def export_file(variable, class_list, indice, hori, filename):
+def export_file(variable, class_list, indice, hori, filename, label_dic):
+
     temp_wb = xlsxwriter.Workbook(filename)
     temp_ws = temp_wb.add_worksheet()
-
+    class_list = np.array(class_list)
+    for key in label_dic.keys():
+        class_list = np.where(class_list == key, label_dic.get(key), class_list)
+    class_list = class_list.tolist()
     ## set the first column
     for row in range(1,len(class_list)+1):
         temp_ws.write(row, 0, "C" + str(indice[row-1]))
