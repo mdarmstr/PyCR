@@ -6,7 +6,7 @@ from statistics import NormalDist
 import matplotlib.pyplot as plt
 from pylab import rcParams
 import scipy
-from numpy import inf
+from statsmodels.api import Poisson
 import scipy.stats as st
 
 def gaussian_algorithm(classNum,class_list,valList,maxNum):
@@ -53,7 +53,14 @@ def gaussian_algorithm(classNum,class_list,valList,maxNum):
 
     ####################################  START GRAPH CODE ###################################
     # generate a histogram by using mean
-    x_values = np.arange(-5, 15, 0.1)
+    min_true = np.min(true_fisher_mean)
+    min_null = np.min(null_fisher_mean)
+    min_x = min(min_null,min_true)
+    max_true = np.max(true_fisher_mean)
+    max_null = np.max(null_fisher_mean)
+    max_x = max(max_null, max_true)
+    x_values = np.arange(min_x, max_x, 0.1)
+
     true_y_values = scipy.stats.norm(true_fisher_mean, true_fisher_std)
     plt.plot(x_values, true_y_values.pdf(x_values), label= 'true gaussian')
     null_y_values = scipy.stats.norm(null_fisher_mean, null_fisher_std)
@@ -77,8 +84,6 @@ def gaussian_algorithm(classNum,class_list,valList,maxNum):
     plt.xlim(mn, mx)
     plt.savefig('output/FisherMean.png')
     plt.figure().clear()
-
-
     return startNum, endNum
 
 

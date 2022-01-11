@@ -20,9 +20,9 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 1
-    inputDataFileName = 'test_data/data_FTIR_19C.xlsx'
-    inputClassFileName = 'test_data/class_FTIR_19C.xlsx'
+    iteration = 100
+    inputDataFileName = 'test_data/data_Mixoils_dataset.xlsx'
+    inputClassFileName = 'test_data/class_Mixoils_dataset.xlsx'
     # get the class list
     classList = getValFromFileByCols(inputClassFileName)
     classList = [int(x[0]) for x in classList]
@@ -44,8 +44,6 @@ def main(isexternal,howMuchSplit,isMicro):
     for i in range(1,len(real_class_num)+1):
         class_num_label.append(i)
 
-
-
     #class color
     class_color = ["#dc3c40", "#55a6bc", 'purple', 'yellowgreen', 'wheat', 'royalblue','#42d7f5','#ca7cf7','#d2f77c']
     class_label = ["o", "x", "4", "*", "+", "D", "8", "s", "p"]
@@ -58,6 +56,13 @@ def main(isexternal,howMuchSplit,isMicro):
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
         isexternal = False
+    ## use hash table to see how many samples for each class and if countSample < 9 we dont do external
+    hash_classCount = [0]*(classNum+1)
+    for c_num in classList:
+        hash_classCount[c_num] += 1
+    for i in range(1,classNum+1):
+        if hash_classCount[i] < 9:
+            isexternal = False
     if isexternal:
         sampleList, external_validation, classList, external_class, indices_train, indices_test = selectRandom(sampleList, classList, howMuchSplit)
 
@@ -115,9 +120,6 @@ def main(isexternal,howMuchSplit,isMicro):
         clf = svm.SVC(kernel='linear', random_state=0, probability=True)
         clf.fit(selectedVariables, class_training)
         class_pred = clf.predict(sample_test[:, valid_idx])
-        print(class_test)
-        print(class_pred)
-        return
         classofic_report = classification_report(class_test, class_pred)
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
@@ -135,6 +137,7 @@ def main(isexternal,howMuchSplit,isMicro):
             plt.plot(fpr, tpr, color=str(roc_colors[k]))
             auc_table.append(auc_num)
             plt.rcParams.update({'font.size': 21})
+            plt.title('Roc_' + str(iteration) + '_iterations')
         else:
             training_class = label_binarize(class_training, classes=class_num_label)
             predict_class = label_binarize(class_test, classes=class_num_label)
@@ -163,6 +166,7 @@ def main(isexternal,howMuchSplit,isMicro):
                 )
                 auc_table.append(roc_auc["micro"])
                 plt.rcParams.update({'font.size': 21})
+                plt.title('Roc_' + str(iteration) + '_iterations')
             else:
 
                 for i in range(classNum):
@@ -173,10 +177,11 @@ def main(isexternal,howMuchSplit,isMicro):
                         color=str(roc_colors[k]),
                     )
                 plt.rcParams.update({'font.size': 21})
+                axarr[0].set_title('Roc_' + str(iteration) + '_iterations')
 
             # fpr["micro"], tpr["micro"], _ = metrics.roc_curve(predict_class.ravel(), y_score.ravel())
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-        plt.title('Roc_'+str(k+1)+'_iterations')
+
         plt.rcParams.update({'font.size': 21})
 
     plt.savefig('output/roc_'+str(k)+'iterations.png')
@@ -515,7 +520,7 @@ def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainin
             )
             axarr[i].legend()
     plt.rcParams.update({'font.size': 21})
-    plt.title(graph_title)
+    axarr[0].set_title(graph_title)
     plt.savefig(output_filename)
     plt.figure().clear()
 def gen_roc_graph(training_sample,training_class,predict_sample,predict_class, fileName,graph_title):
@@ -550,7 +555,7 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     plt.xlabel("P1 \n P1: = {0:0.3f}".format(p1_percentage) + "%")
     plt.ylabel("P2 \n P2: = {0:0.3f}".format(p2_percentage) + "%")
     plt.title(graph_title)
-    plt.rcParams.update({'font.size': 21})
+    plt.rcParams.update({'font.size': 20})
     plt.legend()
     plt.savefig(fileName)
     plt.figure().clear()
