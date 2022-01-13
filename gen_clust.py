@@ -19,9 +19,8 @@ def RunClust(variable_list,class_list,classNum):
         return ClustResolution.clustResolution(clust1, clust2)
     else:
         classNumList = []
-        for i in classNum:
+        for i in range(classNum):
             classNumList.append(i+1)
-
         list_combi = np.array(list(itertools.combinations(classNumList, 2)))
         outputClust = 1
         for set in list_combi:

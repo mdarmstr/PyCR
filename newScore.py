@@ -30,7 +30,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
     scaled_half_samples,half_mean,half_svd = scale_half_data(sample_training)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
     temp_score = calScore(scaled_half_samples, scaled_all_samples)
-    oldScore = gen_clust.RunClust(temp_score,classList,2)
+    oldScore = gen_clust.RunClust(temp_score,classList,classNum)
     finalOutPutIdx = []
     copy_all_scaled_samples = copy.deepcopy(scaled_all_samples)
     copy_half_scaled_samples = copy.deepcopy(scaled_half_samples)
@@ -48,7 +48,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
         temp_scaled_half_samples = scaled_half_samples[:, all_variable_idx]
         temp_scaled_all_samples = scaled_all_samples[:, all_variable_idx]
         temp_score = calScore(temp_scaled_half_samples, temp_scaled_all_samples)
-        newScore = gen_clust.RunClust(temp_score, classList, 2)
+        newScore = gen_clust.RunClust(temp_score, classList, classNum)
         if newScore > oldScore:
             oldScore = newScore
 
@@ -67,7 +67,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
     selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]
     selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx.astype(int))]
     temp_score = calScore(selected_half_matrix, selected_all_matrix)
-    oldScore = gen_clust.RunClust(temp_score, classList, 2)
+    oldScore = gen_clust.RunClust(temp_score, classList, classNum)
     finalOutPutIdx = list(finalOutPutIdx)
 
     # add the variable into the selected variable list
@@ -81,7 +81,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
         selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx)]
         finalOutPutIdx = list(finalOutPutIdx)
         temp_score = calScore(selected_half_matrix, selected_all_matrix)
-        newScore = gen_clust.RunClust(temp_score, classList, 2)
+        newScore = gen_clust.RunClust(temp_score, classList, classNum)
         print("old: " + str(oldScore))
         print("new: " + str(newScore))
 

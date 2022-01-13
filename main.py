@@ -20,12 +20,13 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 100
-    inputDataFileName = 'test_data/data_Mixoils_dataset.xlsx'
-    inputClassFileName = 'test_data/class_Mixoils_dataset.xlsx'
+    iteration = 20
+    inputDataFileName = 'test_data/data_algae.xlsx'
+    inputClassFileName = 'test_data/class_alge.xlsx'
     # get the class list
     classList = getValFromFileByCols(inputClassFileName)
     classList = [int(x[0]) for x in classList]
+    # classList = [int(x) for x in classList]
     classMatrix = np.array(classList)
     # generate roc color
     red = Color("#dc3c40")
@@ -50,6 +51,10 @@ def main(isexternal,howMuchSplit,isMicro):
     # get the variable list
     sampleList = getValFromFileByRows(inputDataFileName)
     sampleMatrix = np.array(sampleList)
+
+    #Do class Tupa
+    sampleList = class_tupa(sampleList,classList)
+
     hori_index = np.arange(1, len(sampleList[0])+1)
     indice_list = np.arange(1, len(classList) + 1)
     export_file(sampleList, classList, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
@@ -112,7 +117,7 @@ def main(isexternal,howMuchSplit,isMicro):
             for i in range(len(hash_list)):
                 prob = float(hash_list[i])/float(k+1)
                 # we are only taking the ratio more than 30%
-                if prob > 0.95:
+                if prob > 0.80:
                     valid_idx.append(i)
 
         selectedVariables = sample_taining[:, valid_idx]
@@ -166,7 +171,7 @@ def main(isexternal,howMuchSplit,isMicro):
                 )
                 auc_table.append(roc_auc["micro"])
                 plt.rcParams.update({'font.size': 21})
-                plt.title('Roc_' + str(iteration) + '_iterations')
+                plt.title('Roc ' + str(iteration) + ' iterations')
             else:
 
                 for i in range(classNum):
@@ -177,14 +182,14 @@ def main(isexternal,howMuchSplit,isMicro):
                         color=str(roc_colors[k]),
                     )
                 plt.rcParams.update({'font.size': 21})
-                axarr[0].set_title('Roc_' + str(iteration) + '_iterations')
+                axarr[0].set_title('Roc ' + str(iteration) + ' iterations')
 
             # fpr["micro"], tpr["micro"], _ = metrics.roc_curve(predict_class.ravel(), y_score.ravel())
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
         plt.rcParams.update({'font.size': 21})
 
-    plt.savefig('output/roc_'+str(k)+'iterations.png')
+    plt.savefig('output/roc '+str(k)+'iterations.png')
     plt.figure().clear()
 
     ## save all the auc number in to list
@@ -237,7 +242,7 @@ def main(isexternal,howMuchSplit,isMicro):
     for i in range(len(hash_list)):
         prob = float(hash_list[i])/iteration
         # we are only taking the ratio more than 30%
-        if prob > 0.95:
+        if prob > 0.80:
             valid_idx.append(i)
     ####################################  START GRAPH CODE ###################################
     # generate PCA visualization
@@ -456,31 +461,32 @@ def confident_ellipse(score1, score2, confident_interval = 0.95):
     return x_ellipse, y_ellipse
 
 def export_file(variable, class_list, indice, hori, filename, label_dic):
-
-    temp_wb = xlsxwriter.Workbook(filename)
-    temp_ws = temp_wb.add_worksheet()
-    class_list = np.array(class_list)
-    for key in label_dic.keys():
-        class_list = np.where(class_list == key, label_dic.get(key), class_list)
-    class_list = class_list.tolist()
-    ## set the first column
-    for row in range(1,len(class_list)+1):
-        temp_ws.write(row, 0, "C" + str(indice[row-1]))
-
-    ## set the first row
-    temp_ws.write(0, 1, "class")
-    temp_ws.write(0, 0, "Sample name")
-    for col in range(2,len(variable[0])+2):
-        temp_ws.write(0,col,"variable" + str(hori[col-2]))
-
-    ## appen class number
-    for row in range(1,len(class_list)+1):
-        temp_ws.write(row,1,class_list[row-1])
-    ## append variable
-    for col in range(2,len(variable[0])+2):
-        for row in range(1,len(class_list)+1 ):
-            temp_ws.write(row,col,variable[row-1][col-2])
-    temp_wb.close()
+    pass
+    #
+    # temp_wb = xlsxwriter.Workbook(filename)
+    # temp_ws = temp_wb.add_worksheet()
+    # class_list = np.array(class_list)
+    # for key in label_dic.keys():
+    #     class_list = np.where(class_list == key, label_dic.get(key), class_list)
+    # class_list = class_list.tolist()
+    # ## set the first column
+    # for row in range(1,len(class_list)+1):
+    #     temp_ws.write(row, 0, "C" + str(indice[row-1]))
+    #
+    # ## set the first row
+    # temp_ws.write(0, 1, "class")
+    # temp_ws.write(0, 0, "Sample name")
+    # for col in range(2,len(variable[0])+2):
+    #     temp_ws.write(0,col,"variable" + str(hori[col-2]))
+    #
+    # ## appen class number
+    # for row in range(1,len(class_list)+1):
+    #     temp_ws.write(row,1,class_list[row-1])
+    # ## append variable
+    # for col in range(2,len(variable[0])+2):
+    #     for row in range(1,len(class_list)+1 ):
+    #         temp_ws.write(row,col,variable[row-1][col-2])
+    # temp_wb.close()
 def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainingVal, predicVal, roc_colors, output_filename,isMicro,graph_title):
 
     training_class = label_binarize(trainingClass, classes=class_num_label)
@@ -559,4 +565,41 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     plt.legend()
     plt.savefig(fileName)
     plt.figure().clear()
+
+def class_tupa(X,Y):
+    cls = np.array(Y)
+    X = np.array(X)
+    cls = np.unique(cls)
+    numCls = len(cls)
+    class_idx = []
+    return_sampleList = []
+    for i in range(numCls):
+        class_idx.append([])
+    for i in range(len(Y)):
+        class_idx[Y[i]-1].append(i)
+    usetupa =[]
+    for i in range(numCls):
+        temp_usetupa =[]
+        X_temp = X[class_idx[i],:]
+        for i in range(len(X_temp[0])):
+            temp_vari = X_temp[:,i]
+            if 0 not in temp_vari:
+                temp_usetupa.append(1)
+            else:
+                temp_usetupa.append(0)
+        usetupa.append(temp_usetupa)
+    sumNum = []
+    for i in range(numCls):
+        sumNum.append([])
+    for i in range(len(Y)):
+        temp = np.matmul(usetupa[Y[i]-1],X[i])
+        temp = np.sum(temp)
+        sumNum[Y[i]-1].append(temp)
+    sumNum = np.array(sumNum)
+    for i in range(numCls):
+        X_temp = X[class_idx[i], :]
+        temp_sum = np.transpose([sumNum[i]])
+        temp_div = np.divide(X_temp,temp_sum)
+        return_sampleList +=temp_div.tolist()
+    return return_sampleList
 main(True,0.5,False)
