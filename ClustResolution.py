@@ -15,7 +15,6 @@ def clustResolution(clust1, clust2):
     c1_mean = c1.mean(axis=0)
     c2_mean = c2.mean(axis=0)
 
-
     #SVD for ranked eigenvalues from covariance matrices
     c1_cov = np.cov(c1.T)
     c2_cov = np.cov(c2.T)

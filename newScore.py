@@ -7,16 +7,14 @@ import fisherRatio_in
 import gen_clust
 import numpy as np
 from sklearn.model_selection import train_test_split
-
 def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit):
-    # get sample matrix from file, column is variable and row is sample
     allSampleList = np.array(allSampleList)
     #get the half randomly selected sample and calculate the fisher ration
     sample_training, sample_test, class_training, class_test = selectRandom(allSampleList, classList,howMuchSplit)
     fisherRatio = fisherRatio_in.cal_ratio(sample_training, class_training, classNum)
     sorted_fisherRatio = sorted(fisherRatio.items(), key=operator.itemgetter(1), reverse=True)
 
-    # get the start variable list and end variable list by startNum and end Numx
+    # get the start variable list and end variable list by startNum and end Num
     startNumList = []
     endNumList = []
     sorted_fisher_idx = []
@@ -53,15 +51,16 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
             oldScore = newScore
 
         if newScore <= oldScore:
+            print("old: " + str(oldScore))
+            print("new: " + str(newScore))
             finalOutPutIdx.append(idx)
             all_variable_idx.append(idx)
-            all_variable_idx.sort()
+            # all_variable_idx.sort()
 
+    finalOutPutIdx = copy.deepcopy(np.array(finalOutPutIdx))
     # set threshold incase we dont have enough variables
-    finalOutPutIdx = np.array(finalOutPutIdx)
     if len(finalOutPutIdx) < 2:
-        finalOutPutIdx = sorted_fisher_idx[10:]
-
+        finalOutPutIdx = sorted_fisher_idx[5:]
     # calculate the old score with all pre-selected variables
     finalOutPutIdx = np.array(finalOutPutIdx)
     selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]

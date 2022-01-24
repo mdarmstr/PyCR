@@ -38,47 +38,6 @@ def setNumber(fisherProb,classNum):
     temp_score = calScore(scaled_half_samples, scaled_all_samples)
     oldScore = gen_clust.RunClust(temp_score,classList,2)
 
-
-    # finalStartNumList = []
-    # scaledStartNumList = []
-    # finalScaledStartNumList = []
-    # for i in range(len(startNumList)):
-    #     scaledStartNumList.append(i)
-    # for g in range(len(startNumList)):
-    #     scaledStartNumList.remove(g)
-    #     allScaledSamples = getScaledValueFromFile("data/scaledclust.xlsx", scaledStartNumList)
-    #     halfScaledSamples = []
-    #     for i in rand_idx_list:
-    #         halfScaledSamples.append(allScaledSamples[i])
-    #     temp_score = calScore(halfScaledSamples, allScaledSamples)
-    #     finalScore = gen_clust.RunClust(temp_score, classList, 2)
-    #     if finalScore >= oldScore:
-    #         oldScore = finalScore
-    #         finalStartNumList.append(startNumList[g])
-    #         finalScaledStartNumList.append(g)
-    #     if finalScore < oldScore:
-    #         scaledStartNumList.append(g)
-    #
-    # scaledEndNumList = []
-    # for i in range(len(scaledStartNumList)-1,(len(startNumList)+len(endNumList))-1):
-    #     scaledEndNumList.append(i)
-    # starNum = len(startNumList)
-    # for i in range(len(endNumList)):
-    #     tempidx = starNum+i
-    #     finalScaledStartNumList.append(tempidx)
-    #     allScaledSamples = getScaledValueFromFile("data/scaledclust.xlsx", finalScaledStartNumList)
-    #     halfScaledSamples = []
-    #     for i in rand_idx_list:
-    #         halfScaledSamples.append(allScaledSamples[i])
-    #     temp_score = calScore(halfScaledSamples, allScaledSamples)
-    #     finalScore = gen_clust.RunClust(temp_score, classList, 2)
-    #     if finalScore >= oldScore:
-    #         oldScore = finalScore
-    #         finalStartNumList.append(endNumList[i])
-    #     if finalScore < oldScore:
-    #         finalScaledStartNumList.remove(tempidx)
-    # return finalStartNumList
-
 def convertToFile(sampleLists):
     wb = xlrd.open_workbook("data/setClass_file.xlsx")
     # select the first sheet from xlsx file

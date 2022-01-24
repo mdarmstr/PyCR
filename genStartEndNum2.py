@@ -9,7 +9,7 @@ import scipy
 from statsmodels.api import Poisson
 import scipy.stats as st
 
-def gaussian_algorithm(classNum,class_list,valList,maxNum):
+def gaussian_algorithm(classNum,class_list,valList):
     sample_matrix = np.array(valList)
     k = 0
     true_means = []

@@ -20,7 +20,7 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 20
+    iteration = 200
     inputDataFileName = 'test_data/data_algae.xlsx'
     inputClassFileName = 'test_data/class_alge.xlsx'
     # get the class list
@@ -40,7 +40,7 @@ def main(isexternal,howMuchSplit,isMicro):
         class_trans_dict[i+1] = real_class_num[i]
     for key in class_trans_dict.keys():
         classList = np.where(classList == class_trans_dict.get(key),key,classList)
-    classList =  classList.tolist()
+    classList = classList.tolist()
     class_num_label = []
     for i in range(1,len(real_class_num)+1):
         class_num_label.append(i)
@@ -51,13 +51,15 @@ def main(isexternal,howMuchSplit,isMicro):
     # get the variable list
     sampleList = getValFromFileByRows(inputDataFileName)
     sampleMatrix = np.array(sampleList)
+    ori_sample = sampleList
+    ori_class = classList
 
     #Do class Tupa
     sampleList = class_tupa(sampleList,classList)
 
     hori_index = np.arange(1, len(sampleList[0])+1)
     indice_list = np.arange(1, len(classList) + 1)
-    export_file(sampleList, classList, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
+    export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
         isexternal = False
@@ -82,7 +84,7 @@ def main(isexternal,howMuchSplit,isMicro):
         external_variables_ws.write(0, 0, "There is not enough samples to have external validation.")
 
     # get the start number and the end number
-    startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, sampleList,10)
+    startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, sampleList)
     # create a file to save the generate statistical number(accuracy, sensitivity, selectivity)
     class_ws_list = []
     class_stat_list = []
@@ -93,7 +95,7 @@ def main(isexternal,howMuchSplit,isMicro):
         class_stat_list.append([])
 
     # create a hash table to take count for the show up times for each variables
-    hash_list = [0]*1500
+    hash_list = [0]*(len(sampleList[0])+1)
     if classNum == 2 or isMicro:
         auc_table = []
     else:
@@ -117,7 +119,7 @@ def main(isexternal,howMuchSplit,isMicro):
             for i in range(len(hash_list)):
                 prob = float(hash_list[i])/float(k+1)
                 # we are only taking the ratio more than 30%
-                if prob > 0.80:
+                if prob > 0.60:
                     valid_idx.append(i)
 
         selectedVariables = sample_taining[:, valid_idx]
@@ -188,7 +190,6 @@ def main(isexternal,howMuchSplit,isMicro):
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
         plt.rcParams.update({'font.size': 21})
-
     plt.savefig('output/roc '+str(k)+'iterations.png')
     plt.figure().clear()
 
@@ -242,13 +243,13 @@ def main(isexternal,howMuchSplit,isMicro):
     for i in range(len(hash_list)):
         prob = float(hash_list[i])/iteration
         # we are only taking the ratio more than 30%
-        if prob > 0.80:
+        if prob > 0.60:
             valid_idx.append(i)
+    temp_export_file(ori_sample,ori_class,indice_list,hori_index,'variableProb.xlsx',class_trans_dict,hash_list,iteration)
     ####################################  START GRAPH CODE ###################################
     # generate PCA visualization
     scale_training_sample,scale_training_mean,scale_training_std = scale_half_data(sampleList)
     scaled_external,scale_training_mean,scale_training_std = scale_half_data(external_validation)
-    # scaled_external = scale_all_data(external_validation, scale_training_mean, scale_training_std)
     class_index_list = []
     external_class_index_list = []
     for i in range(classNum+1):
@@ -462,7 +463,6 @@ def confident_ellipse(score1, score2, confident_interval = 0.95):
 
 def export_file(variable, class_list, indice, hori, filename, label_dic):
     pass
-    #
     # temp_wb = xlsxwriter.Workbook(filename)
     # temp_ws = temp_wb.add_worksheet()
     # class_list = np.array(class_list)
@@ -487,6 +487,33 @@ def export_file(variable, class_list, indice, hori, filename, label_dic):
     #     for row in range(1,len(class_list)+1 ):
     #         temp_ws.write(row,col,variable[row-1][col-2])
     # temp_wb.close()
+
+def temp_export_file(variable, class_list, indice, hori, filename, label_dic,prob,iteration):
+    temp_wb = xlsxwriter.Workbook(filename)
+    temp_ws = temp_wb.add_worksheet()
+    class_list = np.array(class_list)
+    for key in label_dic.keys():
+        class_list = np.where(class_list == key, label_dic.get(key), class_list)
+    class_list = class_list.tolist()
+    ## set the first column
+    for row in range(1,len(class_list)+1):
+        temp_ws.write(row, 0, "C" + str(indice[row-1]))
+
+    ## set the first row
+    temp_ws.write(0, 1, "class")
+    temp_ws.write(0, 0, "Sample name")
+    for col in range(2,len(variable[0])+2):
+        temp_ws.write(0,col,prob[col-2]/iteration)
+
+    ## appen class number
+    for row in range(1,len(class_list)+1):
+        temp_ws.write(row,1,class_list[row-1])
+    ## append variable
+    for col in range(2,len(variable[0])+2):
+        for row in range(1,len(class_list)+1 ):
+            temp_ws.write(row,col,variable[row-1][col-2])
+    temp_wb.close()
+
 def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainingVal, predicVal, roc_colors, output_filename,isMicro,graph_title):
 
     training_class = label_binarize(trainingClass, classes=class_num_label)
