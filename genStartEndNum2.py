@@ -48,7 +48,7 @@ def gaussian_algorithm(classNum,class_list,valList):
     null_fisher_mean = np.mean(null_means)
     null_fisher_std = np.std(null_means)
     ####################################  END GRAPH CODE ###################################
-    startNum = NormalDist(mu=true_fisher_mean, sigma=true_fisher_std).inv_cdf(0.95)
+    startNum = NormalDist(mu=true_fisher_mean, sigma=true_fisher_std).inv_cdf(0.90)
     endNum = NormalDist(mu=null_fisher_mean, sigma=null_fisher_std).inv_cdf(0.05)
 
     ####################################  START GRAPH CODE ###################################

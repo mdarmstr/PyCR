@@ -27,47 +27,27 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
     #calculate the old score with all the variables inside
     scaled_half_samples,half_mean,half_svd = scale_half_data(sample_training)
     scaled_all_samples = scale_all_data(allSampleList,half_mean,half_svd)
-    temp_score = calScore(scaled_half_samples, scaled_all_samples)
+    temp_score = calScore(scaled_half_samples[:,startNumList], scaled_all_samples[:,startNumList])
     oldScore = gen_clust.RunClust(temp_score,classList,classNum)
-    finalOutPutIdx = []
-    copy_all_scaled_samples = copy.deepcopy(scaled_all_samples)
-    copy_half_scaled_samples = copy.deepcopy(scaled_half_samples)
-
-    all_variable_idx = []
-    for v in range(len(allSampleList[0])):
-        all_variable_idx.append(v)
 
     # get rid of the variable form teh start variable list and calculate the score again
     # compare with the the old score
     # if the new score is lower than the old score, we need save the variable in selected variable list
     # if the new score is higher than the old score, we need put the variable back
+    finalOutPutIdx = copy.deepcopy(startNumList)
     for idx in startNumList:
-        all_variable_idx.remove(idx)
-        temp_scaled_half_samples = scaled_half_samples[:, all_variable_idx]
-        temp_scaled_all_samples = scaled_all_samples[:, all_variable_idx]
+        finalOutPutIdx.remove(idx)
+        temp_scaled_half_samples = scaled_half_samples[:, finalOutPutIdx]
+        temp_scaled_all_samples = scaled_all_samples[:, finalOutPutIdx]
         temp_score = calScore(temp_scaled_half_samples, temp_scaled_all_samples)
         newScore = gen_clust.RunClust(temp_score, classList, classNum)
+        print("old: " + str(oldScore))
+        print("new: " + str(newScore))
         if newScore > oldScore:
             oldScore = newScore
-
         if newScore <= oldScore:
-            print("old: " + str(oldScore))
-            print("new: " + str(newScore))
             finalOutPutIdx.append(idx)
-            all_variable_idx.append(idx)
-            # all_variable_idx.sort()
 
-    finalOutPutIdx = copy.deepcopy(np.array(finalOutPutIdx))
-    # set threshold incase we dont have enough variables
-    if len(finalOutPutIdx) < 2:
-        finalOutPutIdx = sorted_fisher_idx[5:]
-    # calculate the old score with all pre-selected variables
-    finalOutPutIdx = np.array(finalOutPutIdx)
-    selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx.astype(int))]
-    selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx.astype(int))]
-    temp_score = calScore(selected_half_matrix, selected_all_matrix)
-    oldScore = gen_clust.RunClust(temp_score, classList, classNum)
-    finalOutPutIdx = list(finalOutPutIdx)
 
     # add the variable into the selected variable list
     # compare with the the old score
@@ -75,15 +55,12 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit)
     # if the new score is higher than the old score, we need save the variable in selected variable list
     for index in endNumList:
         finalOutPutIdx.append(index)
-        finalOutPutIdx = np.array(finalOutPutIdx)
-        selected_all_matrix = copy_all_scaled_samples[:, (finalOutPutIdx)]
-        selected_half_matrix = copy_half_scaled_samples[:, (finalOutPutIdx)]
-        finalOutPutIdx = list(finalOutPutIdx)
+        selected_all_matrix = scaled_all_samples[:, finalOutPutIdx]
+        selected_half_matrix = scaled_half_samples[:, finalOutPutIdx]
         temp_score = calScore(selected_half_matrix, selected_all_matrix)
         newScore = gen_clust.RunClust(temp_score, classList, classNum)
         print("old: " + str(oldScore))
         print("new: " + str(newScore))
-
         if newScore >= oldScore:
             oldScore = newScore
         if newScore < oldScore:

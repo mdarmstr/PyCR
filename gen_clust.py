@@ -19,9 +19,11 @@ def RunClust(variable_list,class_list,classNum):
         return ClustResolution.clustResolution(clust1, clust2)
     else:
         classNumList = []
+        # give you the all labels in a list classNUm = 3, labels = [1,2,3]
         for i in range(classNum):
             classNumList.append(i+1)
         list_combi = np.array(list(itertools.combinations(classNumList, 2)))
+        # gives up [[1,2][1,3][2,3]]
         outputClust = 1
         for set in list_combi:
             clust1 = []
@@ -37,7 +39,7 @@ def RunClust(variable_list,class_list,classNum):
             clust2 = clust2.transpose()
             # Call function ClustResilution to do further calculation
             newClust = ClustResolution.clustResolution(clust1, clust2)
-            outputClust = outputClust*newClust
+            outputClust *=newClust
         return outputClust
 
 

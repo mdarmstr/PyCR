@@ -20,7 +20,7 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 200
+    iteration = 15
     inputDataFileName = 'test_data/data_algae.xlsx'
     inputClassFileName = 'test_data/class_alge.xlsx'
     # get the class list
@@ -119,7 +119,7 @@ def main(isexternal,howMuchSplit,isMicro):
             for i in range(len(hash_list)):
                 prob = float(hash_list[i])/float(k+1)
                 # we are only taking the ratio more than 30%
-                if prob > 0.60:
+                if prob > 0.90:
                     valid_idx.append(i)
 
         selectedVariables = sample_taining[:, valid_idx]
@@ -243,23 +243,22 @@ def main(isexternal,howMuchSplit,isMicro):
     for i in range(len(hash_list)):
         prob = float(hash_list[i])/iteration
         # we are only taking the ratio more than 30%
-        if prob > 0.60:
+        if prob > 0.90:
             valid_idx.append(i)
     temp_export_file(ori_sample,ori_class,indice_list,hori_index,'variableProb.xlsx',class_trans_dict,hash_list,iteration)
     ####################################  START GRAPH CODE ###################################
     # generate PCA visualization
     scale_training_sample,scale_training_mean,scale_training_std = scale_half_data(sampleList)
     scaled_external,scale_training_mean,scale_training_std = scale_half_data(external_validation)
+
     class_index_list = []
     external_class_index_list = []
     for i in range(classNum+1):
         class_index_list.append([])
-    for i in range(len(classList)):
-        class_index_list[classList[i]].append(i)
-
-    for i in range(classNum+1):
         external_class_index_list.append([])
     for i in range(len(classList)):
+        class_index_list[classList[i]].append(i)
+    for i in range(len(external_class)):
         external_class_index_list[external_class[i]].append(i)
 
     class_variables = scale_training_sample[:, valid_idx]
