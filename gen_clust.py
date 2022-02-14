@@ -12,9 +12,7 @@ def RunClust(variable_list,class_list,classNum):
             elif class_list[i] == 2:
                 clust2.append(variable_list[i])
         clust1 = np.array(clust1)
-        clust1 = clust1.transpose()
         clust2 = np.array(clust2)
-        clust2 = clust2.transpose()
         # Call function ClustResilution to do further calculation
         return ClustResolution.clustResolution(clust1, clust2)
     else:
@@ -34,9 +32,7 @@ def RunClust(variable_list,class_list,classNum):
                 elif class_list[i] == set[1]:
                     clust2.append(variable_list[i])
             clust1 = np.array(clust1)
-            clust1 = clust1.transpose()
             clust2 = np.array(clust2)
-            clust2 = clust2.transpose()
             # Call function ClustResilution to do further calculation
             newClust = ClustResolution.clustResolution(clust1, clust2)
             outputClust *=newClust

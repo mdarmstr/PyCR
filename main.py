@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import xlrd
 import newScore
@@ -18,15 +20,16 @@ import xlsxwriter
 import math
 from colour import Color
 from sklearn.preprocessing import label_binarize
+from sklearn.metrics import confusion_matrix
 
 def main(isexternal,howMuchSplit,isMicro):
-    iteration = 15
+    iteration = 2
     inputDataFileName = 'test_data/data_algae.xlsx'
-    inputClassFileName = 'test_data/class_alge.xlsx'
+    inputClassFileName = 'test_data/class_algae.xlsx'
     # get the class list
     classList = getValFromFileByCols(inputClassFileName)
-    classList = [int(x[0]) for x in classList]
-    # classList = [int(x) for x in classList]
+    # classList = [int(x[0]) for x in classList]
+    classList = [int(x) for x in classList]
     classMatrix = np.array(classList)
     # generate roc color
     red = Color("#dc3c40")
@@ -55,11 +58,12 @@ def main(isexternal,howMuchSplit,isMicro):
     ori_class = classList
 
     #Do class Tupa
-    sampleList = class_tupa(sampleList,classList)
-
+    sampleList = tupa(sampleList,classList)
     hori_index = np.arange(1, len(sampleList[0])+1)
     indice_list = np.arange(1, len(classList) + 1)
-    export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
+    export_file(sampleList, ori_class, indice_list, hori_index, 'output/tupaAllSample.xlsx', class_trans_dict)
+    # export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
+
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
         isexternal = False
@@ -103,12 +107,17 @@ def main(isexternal,howMuchSplit,isMicro):
         auc_table = []
         for i in range(classNum):
             auc_table.append([])
+    class_index_list = []
+    for i in range(classNum + 1):
+        class_index_list.append([])
+    for i in range(len(classList)):
+        class_index_list[classList[i]].append(i)
 
     for k in range(iteration):
         printStr = "###################################" + str(k)
         print(printStr)
         # getting the selected index
-        return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit)
+        return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit,k)
         for j in return_idx:
             hash_list[j] = hash_list[j]+1
         if k == 0:
@@ -123,6 +132,10 @@ def main(isexternal,howMuchSplit,isMicro):
                     valid_idx.append(i)
 
         selectedVariables = sample_taining[:, valid_idx]
+        ############################################################################  PCA
+        scaled_sample_training,train_mean,train_std = scale_half_data(sample_taining)
+        scaled_all_sample = scale_all_data(sampleList,train_mean,train_std)
+
         # Train the model using the training sets
         clf = svm.SVC(kernel='linear', random_state=0, probability=True)
         clf.fit(selectedVariables, class_training)
@@ -188,7 +201,6 @@ def main(isexternal,howMuchSplit,isMicro):
 
             # fpr["micro"], tpr["micro"], _ = metrics.roc_curve(predict_class.ravel(), y_score.ravel())
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-
         plt.rcParams.update({'font.size': 21})
     plt.savefig('output/roc '+str(k)+'iterations.png')
     plt.figure().clear()
@@ -263,26 +275,25 @@ def main(isexternal,howMuchSplit,isMicro):
 
     class_variables = scale_training_sample[:, valid_idx]
     dummyU, dummyS, V = svds(class_variables, k=2)
-    dummyS = np.diag(dummyS)
-    score = np.dot(dummyU, dummyS)
     V = np.transpose(V)
-    Xt = np.dot(dummyU, dummyS)
+    score = np.dot(scaled_all_sample[:,valid_idx], V)
+
 
     for z in range(1, classNum+1):
         class_score = score[class_index_list[z],:]
         x_ellipse, y_ellipse = confident_ellipse(class_score[:, 0], class_score[:, 1])
         plt.plot(x_ellipse, y_ellipse,color=class_color[z-1])
         plt.fill(x_ellipse, y_ellipse,color=class_color[z-1], alpha=0.3)
-        class_Xt = Xt[class_index_list[z], :]
+        class_Xt = score[class_index_list[z], :]
         plt.scatter(class_Xt[:, 0], class_Xt[:, 1], c=class_color[z-1], marker=class_label[0], label='training' + str(z))
     # calculating the PCA percentage value
     pU, pS, pV = np.linalg.svd(class_variables)
     pca_percentage_val = np.cumsum(pS) / sum(pS)
     p1_percentage = pca_percentage_val[0] * 100
     p2_percentage = pca_percentage_val[1] * 100
-    plt.xlabel("P1 \n P1: = {0:0.3f}".format(p1_percentage)+"%")
-    plt.ylabel("P2 \n P2: = {0:0.3f}".format(p2_percentage)+"%")
-    plt.rcParams.update({'font.size': 21})
+    plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
+    plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
+    plt.rcParams.update({'font.size': 10})
     plt.title('PCA_training')
     plt.legend()
     plt.savefig('output/pca_taining.png')
@@ -301,6 +312,8 @@ def main(isexternal,howMuchSplit,isMicro):
         plt.legend()
         plt.savefig('output/pca_external.png')
         plt.figure().clear()
+        conf_matrix = confusion_matrix(external_class, class_pred)
+        gen_file_by_matrix(conf_matrix,'output/confusion_matrix.xlsx')
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
         external_stat_wb = xlsxwriter.Workbook('output/external_stat_report_class.xlsx')
@@ -378,6 +391,19 @@ def genfile(indexList, fileName):
         new_df = pd.DataFrame(col)
         df = pd.concat([df, new_df], axis=1)
     df.to_excel("output/selectVariable.xlsx", index=False,header=None)
+
+#generate file by the input matrix
+def gen_file_by_matrix(matrix,fileName):
+    wb = xlsxwriter.Workbook(fileName)
+    ws = wb.add_worksheet()
+    # select the first sheet from xlsx file
+    row_len = len(matrix)
+    col_len = len(matrix[0])
+    for row in range(row_len):
+        for col in range(col_len):
+            ws.write(row, col, matrix[row][col])
+    wb.close()
+
 
 # get the list of samples from the original file
 def getValFromFileByRows(fileName):
@@ -461,31 +487,30 @@ def confident_ellipse(score1, score2, confident_interval = 0.95):
     return x_ellipse, y_ellipse
 
 def export_file(variable, class_list, indice, hori, filename, label_dic):
-    pass
-    # temp_wb = xlsxwriter.Workbook(filename)
-    # temp_ws = temp_wb.add_worksheet()
-    # class_list = np.array(class_list)
-    # for key in label_dic.keys():
-    #     class_list = np.where(class_list == key, label_dic.get(key), class_list)
-    # class_list = class_list.tolist()
-    # ## set the first column
-    # for row in range(1,len(class_list)+1):
-    #     temp_ws.write(row, 0, "C" + str(indice[row-1]))
-    #
-    # ## set the first row
-    # temp_ws.write(0, 1, "class")
-    # temp_ws.write(0, 0, "Sample name")
-    # for col in range(2,len(variable[0])+2):
-    #     temp_ws.write(0,col,"variable" + str(hori[col-2]))
-    #
-    # ## appen class number
-    # for row in range(1,len(class_list)+1):
-    #     temp_ws.write(row,1,class_list[row-1])
-    # ## append variable
-    # for col in range(2,len(variable[0])+2):
-    #     for row in range(1,len(class_list)+1 ):
-    #         temp_ws.write(row,col,variable[row-1][col-2])
-    # temp_wb.close()
+    temp_wb = xlsxwriter.Workbook(filename)
+    temp_ws = temp_wb.add_worksheet()
+    class_list = np.array(class_list)
+    for key in label_dic.keys():
+        class_list = np.where(class_list == key, label_dic.get(key), class_list)
+    class_list = class_list.tolist()
+    ## set the first column
+    for row in range(1,len(class_list)+1):
+        temp_ws.write(row, 0, "C" + str(indice[row-1]))
+
+    ## set the first row
+    temp_ws.write(0, 1, "class")
+    temp_ws.write(0, 0, "Sample name")
+    for col in range(2,len(variable[0])+2):
+        temp_ws.write(0,col,"variable" + str(hori[col-2]))
+
+    ## appen class number
+    for row in range(1,len(class_list)+1):
+        temp_ws.write(row,1,class_list[row-1])
+    ## append variable
+    for col in range(2,len(variable[0])+2):
+        for row in range(1,len(class_list)+1 ):
+            temp_ws.write(row,col,variable[row-1][col-2])
+    temp_wb.close()
 
 def temp_export_file(variable, class_list, indice, hori, filename, label_dic,prob,iteration):
     temp_wb = xlsxwriter.Workbook(filename)
@@ -577,6 +602,9 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     Xt_training_noFS = np.dot(training_sample, V)
     for z in range(1, classNum + 1):
         class_Xt_training_noFS = Xt_training_noFS[class_index_list[z], :]
+        x_ellipse, y_ellipse = confident_ellipse(class_Xt_training_noFS[:, 0], class_Xt_training_noFS[:, 1])
+        plt.plot(x_ellipse, y_ellipse, color=class_color[z - 1])
+        plt.fill(x_ellipse, y_ellipse, color=class_color[z - 1], alpha=0.3)
         plt.scatter(class_Xt_training_noFS[:, 0], class_Xt_training_noFS[:, 1], c=class_color[z - 1],
                     marker=class_label[0], label='class' + str(z))
     # calculating the PCA percentage value
@@ -584,10 +612,10 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     pca_percentage_val = np.cumsum(pS) / sum(pS)
     p1_percentage = pca_percentage_val[0] * 100
     p2_percentage = pca_percentage_val[1] * 100
-    plt.xlabel("P1 \n P1: = {0:0.3f}".format(p1_percentage) + "%")
-    plt.ylabel("P2 \n P2: = {0:0.3f}".format(p2_percentage) + "%")
+    plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
+    plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
     plt.title(graph_title)
-    plt.rcParams.update({'font.size': 20})
+    plt.rcParams.update({'font.size': 10})
     plt.legend()
     plt.savefig(fileName)
     plt.figure().clear()
@@ -599,10 +627,10 @@ def class_tupa(X,Y):
     numCls = len(cls)
     class_idx = []
     return_sampleList = []
-    for i in range(numCls):
+    for j in range(numCls):
         class_idx.append([])
-    for i in range(len(Y)):
-        class_idx[Y[i]-1].append(i)
+    for z in range(len(Y)):
+        class_idx[Y[z]-1].append(z)
     usetupa =[]
     for i in range(numCls):
         temp_usetupa =[]
@@ -614,18 +642,35 @@ def class_tupa(X,Y):
             else:
                 temp_usetupa.append(0)
         usetupa.append(temp_usetupa)
-    sumNum = []
-    for i in range(numCls):
-        sumNum.append([])
     for i in range(len(Y)):
-        temp = np.matmul(usetupa[Y[i]-1],X[i])
-        temp = np.sum(temp)
-        sumNum[Y[i]-1].append(temp)
-    sumNum = np.array(sumNum)
-    for i in range(numCls):
-        X_temp = X[class_idx[i], :]
-        temp_sum = np.transpose([sumNum[i]])
+        X_temp = X[i]
+        mul_temp = copy.copy(X_temp)
+        for k in range(len(mul_temp)):
+            mul_temp[k] = mul_temp[k]*usetupa[Y[i]-1][k]
+        temp_sum = np.sum(mul_temp)
         temp_div = np.divide(X_temp,temp_sum)
-        return_sampleList +=temp_div.tolist()
+        return_sampleList.append(temp_div.tolist())
+    return return_sampleList
+
+def tupa(X,Y):
+    cls = np.array(Y)
+    X = np.array(X)
+    cls = np.unique(cls)
+    usetupa =[]
+    return_sampleList=[]
+    for i in range(len(X[0])):
+        temp_vari = X[:,i]
+        if 0 not in temp_vari:
+            usetupa.append(1)
+        else:
+            usetupa.append(0)
+    for i in range(len(Y)):
+        X_temp = X[i]
+        mul_temp = copy.copy(X_temp)
+        for k in range(len(mul_temp)):
+            mul_temp[k] = mul_temp[k]*usetupa[k]
+        temp_sum = np.sum(mul_temp)
+        temp_div = np.divide(X_temp,temp_sum)
+        return_sampleList.append(temp_div.tolist())
     return return_sampleList
 main(True,0.5,False)
