@@ -101,8 +101,8 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
                 # calculating the PCA percentage value
                 pU, pS, pV = np.linalg.svd(temp_scaled_half_samples)
                 pca_percentage_val = np.cumsum(pS) / sum(pS)
-                p1_percentage = pca_percentage_val[0] * 100
-                p2_percentage = pca_percentage_val[1] * 100
+                p2_percentage = pca_percentage_val[0] * 100
+                p1_percentage = pca_percentage_val[1] * 100
                 plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
                 plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
                 plt.rcParams.update({'font.size': 10})
@@ -156,8 +156,8 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
                 # calculating the PCA percentage value
                 pU, pS, pV = np.linalg.svd(temp_scaled_half_samples)
                 pca_percentage_val = np.cumsum(pS) / sum(pS)
-                p1_percentage = pca_percentage_val[0] * 100
-                p2_percentage = pca_percentage_val[1] * 100
+                p2_percentage = pca_percentage_val[0] * 100
+                p1_percentage = pca_percentage_val[1] * 100
                 plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
                 plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
                 plt.rcParams.update({'font.size': 10})
@@ -168,10 +168,11 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
         elif newScore < oldScore:
             finalOutPutIdx.remove(index)
             title = "keeping"
-    # filepaths
+    #save  filepaths and generate gif
     png_dir = 'output/animation/'
     images = []
-    for file_name in sorted(os.listdir(png_dir)):
+    for file_num in range(len(sorted(os.listdir(png_dir)))-1):
+        file_name = str(file_num)+'.png'
         if file_name.endswith('.png') and file_name != "0.png":
             file_path = os.path.join(png_dir, file_name)
             images.append(imageio.imread(file_path))

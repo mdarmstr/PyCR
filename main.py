@@ -1,7 +1,7 @@
 import copy
-
 import numpy as np
 import xlrd
+import os
 import newScore
 import pandas as pd
 import genStartEndNum2
@@ -22,7 +22,7 @@ from colour import Color
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import confusion_matrix
 
-def main(isexternal,howMuchSplit,isMicro):
+def main(isexternal,howMuchSplit,isMicro,tupaType):
     iteration = 2
     inputDataFileName = 'test_data/data_algae.xlsx'
     inputClassFileName = 'test_data/class_algae.xlsx'
@@ -31,6 +31,21 @@ def main(isexternal,howMuchSplit,isMicro):
     # classList = [int(x[0]) for x in classList]
     classList = [int(x) for x in classList]
     classMatrix = np.array(classList)
+    # Create the needed directory if directory not exist
+    if not os.path.exists('output/animation'):
+        os.makedirs('output/animation')
+    if not os.path.exists('output/rocExternal'):
+        os.makedirs('output/rocExternal')
+    if not os.path.exists('output/rocIterations'):
+        os.makedirs('output/rocIterations')
+    if not os.path.exists('output/rocTrainFS'):
+        os.makedirs('output/rocTrainFS')
+    if not os.path.exists('output/rocTrainNoFS'):
+        os.makedirs('output/rocTrainNoFS')
+    if not os.path.exists('output/rocValiFS'):
+        os.makedirs('output/rocValiFS')
+    if not os.path.exists('output/rocValiNoFS'):
+        os.makedirs('output/rocValiNoFS')
     # generate roc color
     red = Color("#dc3c40")
     roc_colors = list(red.range_to(Color("#55a6bc"), iteration+1))
@@ -53,16 +68,21 @@ def main(isexternal,howMuchSplit,isMicro):
     class_label = ["o", "x", "4", "*", "+", "D", "8", "s", "p"]
     # get the variable list
     sampleList = getValFromFileByRows(inputDataFileName)
-    sampleMatrix = np.array(sampleList)
-    ori_sample = sampleList
+    ori_sample = np.array(sampleList)
     ori_class = classList
 
     #Do class Tupa
-    sampleList = tupa(sampleList,classList)
+    if tupaType.lower() =='tupa':
+        sampleList = tupa(sampleList,classList)
+    elif tupaType.lower()=='classtupa':
+        sampleList = class_tupa(sampleList, classList)
+    else:
+        print("please select the valid tupa type.")
+        return
     hori_index = np.arange(1, len(sampleList[0])+1)
     indice_list = np.arange(1, len(classList) + 1)
     export_file(sampleList, ori_class, indice_list, hori_index, 'output/tupaAllSample.xlsx', class_trans_dict)
-    # export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
+    export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.xlsx', class_trans_dict)
 
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
     if len(sampleList) < 50:
@@ -78,11 +98,13 @@ def main(isexternal,howMuchSplit,isMicro):
         sampleList, external_validation, classList, external_class, indices_train, indices_test = selectRandom(sampleList, classList, howMuchSplit)
 
     # output the splited training and external variables in special format
+    index_indices_train =  [x-1 for x in indices_train]
+    index_indices_test =  [x-1 for x in indices_test]
     if isexternal:
-        export_file(sampleList, classList, indices_train, hori_index, 'output/training_variables.xlsx', class_trans_dict)
-        export_file(external_validation, external_class, indices_test, hori_index, 'output/external_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_train,:], classList, indices_train, hori_index, 'output/training_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_test,:], external_class, indices_test, hori_index, 'output/external_variables.xlsx', class_trans_dict)
     else:
-        export_file(sampleList, classList, indice_list, hori_index, 'output/training_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_train,:], classList, indice_list, hori_index, 'output/training_variables.xlsx', class_trans_dict)
         external_variables_wb = xlsxwriter.Workbook('output/external_variables.xlsx')
         external_variables_ws = external_variables_wb.add_worksheet()
         external_variables_ws.write(0, 0, "There is not enough samples to have external validation.")
@@ -100,12 +122,13 @@ def main(isexternal,howMuchSplit,isMicro):
 
     # create a hash table to take count for the show up times for each variables
     hash_list = [0]*(len(sampleList[0])+1)
+    figPlot = []
     if classNum == 2 or isMicro:
         auc_table = []
     else:
-        fig, axarr = plt.subplots(classNum)
         auc_table = []
-        for i in range(classNum):
+        for i in range(classNum+1):
+            figPlot.append(plt.subplots(1))
             auc_table.append([])
     class_index_list = []
     for i in range(classNum + 1):
@@ -156,7 +179,7 @@ def main(isexternal,howMuchSplit,isMicro):
             fpr, tpr, _ = metrics.roc_curve(class_test, class_pred, pos_label=2)
             plt.plot(fpr, tpr, color=str(roc_colors[k]))
             auc_table.append(auc_num)
-            plt.rcParams.update({'font.size': 21})
+            plt.rcParams.update({'font.size': 15})
             plt.title('Roc_' + str(iteration) + '_iterations')
         else:
             training_class = label_binarize(class_training, classes=class_num_label)
@@ -185,27 +208,32 @@ def main(isexternal,howMuchSplit,isMicro):
                     color=str(roc_colors[k]),
                 )
                 auc_table.append(roc_auc["micro"])
-                plt.rcParams.update({'font.size': 21})
+                plt.rcParams.update({'font.size':15 })
                 plt.title('Roc ' + str(iteration) + ' iterations')
             else:
 
                 for i in range(classNum):
                     auc_table[i].append(roc_auc[i])
-                    axarr[i].plot(
+                    figPlot[i][1].plot(
                         fpr[i],
                         tpr[i],
                         color=str(roc_colors[k]),
                     )
-                plt.rcParams.update({'font.size': 21})
-                axarr[0].set_title('Roc ' + str(iteration) + ' iterations')
+                plt.rcParams.update({'font.size': 15})
+
 
             # fpr["micro"], tpr["micro"], _ = metrics.roc_curve(predict_class.ravel(), y_score.ravel())
             # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-        plt.rcParams.update({'font.size': 21})
-    plt.savefig('output/roc '+str(k)+'iterations.png')
-    plt.figure().clear()
+        plt.rcParams.update({'font.size': 15})
 
     ## save all the auc number in to list
+    for i in range(classNum):
+        auc_table[i].append(roc_auc[i])
+        figPlot[i][1].set_title('Roc ' + str(iteration) + ' iterations class' + str(i+1))
+        figPlot[i][0].savefig('output/rocIterations/roc '+str(k)+'iterations class'+str(i+1)+'.png')
+        figPlot[i][0].clear()
+
+
     auc_wb = xlsxwriter.Workbook('output/auc_report.xlsx')
     if classNum ==2 or isMicro:
         auc_row = 0
@@ -226,10 +254,10 @@ def main(isexternal,howMuchSplit,isMicro):
     # generate file for selected training and selected validation in special format
     export_vali_index = [x+1 for x in valid_idx]
     if isexternal:
-        export_file(sampleList[:,valid_idx], classList, indices_train, export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
-        export_file(external_validation[:,valid_idx], external_class, indices_test, export_vali_index, 'output/selected_external_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_train,:][:,valid_idx], classList, indices_train, export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_test,:][:,valid_idx], external_class, indices_test, export_vali_index, 'output/selected_external_variables.xlsx', class_trans_dict)
     else:
-        export_file(sampleList[:,valid_idx], classList,indice_list,export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
+        export_file(ori_sample[index_indices_train,:][:,valid_idx], classList,indice_list,export_vali_index, 'output/selected_training_variables.xlsx', class_trans_dict)
         external_variables_wb = xlsxwriter.Workbook('output/selected_external_variables.xlsx')
         external_variables_ws = external_variables_wb.add_worksheet()
         external_variables_ws.write(0, 0, "There is not enough samples to have external validation.")
@@ -289,8 +317,8 @@ def main(isexternal,howMuchSplit,isMicro):
     # calculating the PCA percentage value
     pU, pS, pV = np.linalg.svd(class_variables)
     pca_percentage_val = np.cumsum(pS) / sum(pS)
-    p1_percentage = pca_percentage_val[0] * 100
-    p2_percentage = pca_percentage_val[1] * 100
+    p2_percentage = pca_percentage_val[0] * 100
+    p1_percentage = pca_percentage_val[1] * 100
     plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
     plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
     plt.rcParams.update({'font.size': 10})
@@ -308,11 +336,12 @@ def main(isexternal,howMuchSplit,isMicro):
         class_pred = clf_extern.predict(external_validation[:, valid_idx])
         classofic_report = classification_report(external_class, class_pred)
         plt.title('PCA_Training_VS_Validation')
-        plt.rcParams.update({'font.size': 21})
+        plt.rcParams.update({'font.size': 15})
         plt.legend()
         plt.savefig('output/pca_external.png')
         plt.figure().clear()
         conf_matrix = confusion_matrix(external_class, class_pred)
+        conf_matrix = conf_matrix / conf_matrix.astype(np.float).sum(axis=1)
         gen_file_by_matrix(conf_matrix,'output/confusion_matrix.xlsx')
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
@@ -331,9 +360,9 @@ def main(isexternal,howMuchSplit,isMicro):
     # generate ROC for external validation and selected variables
     if isexternal:
         if classNum == 2:
-           gen_roc_graph(sampleList[:,valid_idx],classList,external_validation[:,valid_idx],external_class,"output/roc_external.png", 'Roc_External')
+           gen_roc_graph(sampleList[:,valid_idx],classList,external_validation[:,valid_idx],external_class,"output/rocExternal/roc_external.png", 'Roc_External')
         else:
-            mul_roc_graph(classNum,class_num_label,classList,external_class,sampleList[:,valid_idx],external_validation[:,valid_idx],roc_colors,"output/roc_external.png",isMicro,'Roc_external')
+            mul_roc_graph(classNum,class_num_label,classList,external_class,sampleList[:,valid_idx],external_validation[:,valid_idx],roc_colors,"output/rocExternal/roc_external",isMicro,'Roc_external')
 
 
     # generate 4 SVM graph
@@ -341,29 +370,29 @@ def main(isexternal,howMuchSplit,isMicro):
     gen_pca(scale_training_sample, classNum, class_index_list, class_color, class_label, 'output/PCATrainNoFS.png','PCA_Training_No_FeatureSelection')
     # generate predict ROC
     if classNum == 2:
-        gen_roc_graph(sampleList,classList,sampleList,classList,'output/rocTrainNoFS.png','Roc_Training_No_FeatureSelection')
+        gen_roc_graph(sampleList,classList,sampleList,classList,'output/rocTrainNoFS/rocTrainNoFS.png','Roc_Training_No_FeatureSelection')
     else:
         mul_roc_graph(classNum, class_num_label, classList, classList, sampleList,
-                      sampleList, roc_colors, 'output/rocTrainNoFS.png',isMicro,'Roc_Training_No_FeatureSelection')
+                      sampleList, roc_colors, 'output/rocTrainNoFS/rocTrainNoFS',isMicro,'Roc_Training_No_FeatureSelection')
 
     # graph 2: validation without feature selection
     gen_pca(scaled_external, classNum, external_class_index_list, class_color, class_label, 'output/PCAValiNoFS.png','PCA_Validation_No_FeatureSelection')
     # generate predict ROC
     if classNum == 2:
-        gen_roc_graph(sampleList,classList,external_validation,external_class,'output/rocValiNoFS.png', 'Roc_Validation_No_FeatureSelection')
+        gen_roc_graph(sampleList,classList,external_validation,external_class,'output/rocValiNoFS/rocValiNoFS.png', 'Roc_Validation_No_FeatureSelection')
     else:
         mul_roc_graph(classNum, class_num_label, classList, external_class, sampleList,
-                      external_validation, roc_colors, 'output/rocValiNoFS.png',isMicro,'Roc_Validation_No_FeatureSelection')
+                      external_validation, roc_colors, 'output/rocValiNoFS/rocValiNoFS',isMicro,'Roc_Validation_No_FeatureSelection')
 
 
     # graph 3: training with feature selection
     gen_pca(scale_training_sample[:,valid_idx], classNum, class_index_list, class_color, class_label,'output/PCATrainWithFS.png','PCA_Training_With_FeatureSelection')
     # generate predict ROC
     if classNum == 2:
-        gen_roc_graph(sampleList[:,valid_idx],classList,sampleList[:,valid_idx],classList,'output/rocTrainFS.png','Roc_Training_With_FeatureSelection')
+        gen_roc_graph(sampleList[:,valid_idx],classList,sampleList[:,valid_idx],classList,'output/rocTrainFS/rocTrainFS.png','Roc_Training_With_FeatureSelection')
     else:
         mul_roc_graph(classNum, class_num_label, classList, classList, sampleList[:,valid_idx],
-                      sampleList[:, valid_idx], roc_colors, 'output/rocTrainFS.png',isMicro, 'Roc_Training_With_FeatureSelection')
+                      sampleList[:, valid_idx], roc_colors, 'output/rocTrainFS/rocTrainFS',isMicro, 'Roc_Training_With_FeatureSelection')
 
 
     # graph 4: validation with feature selection
@@ -372,10 +401,10 @@ def main(isexternal,howMuchSplit,isMicro):
 
     # generate predict ROC
     if classNum == 2:
-        gen_roc_graph(sampleList[:,valid_idx],classList,external_validation[:,valid_idx],external_class,'output/rocValiFS.png', 'Roc_Validation_With_FeatureSelection' )
+        gen_roc_graph(sampleList[:,valid_idx],classList,external_validation[:,valid_idx],external_class,'output/rocValiFS/rocValiFS.png', 'Roc_Validation_With_FeatureSelection' )
     else:
         mul_roc_graph(classNum, class_num_label, classList, external_class, sampleList[:, valid_idx],
-                      external_validation[:, valid_idx], roc_colors,'output/rocValiFS.png',isMicro, 'Roc_Validation_With_FeatureSelection' )
+                      external_validation[:, valid_idx], roc_colors,'output/rocValiFS/rocValiFS',isMicro, 'Roc_Validation_With_FeatureSelection' )
     ####################################  END GRAPH CODE ###################################
 
 # generate file of variables by the variable index
@@ -539,7 +568,9 @@ def temp_export_file(variable, class_list, indice, hori, filename, label_dic,pro
     temp_wb.close()
 
 def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainingVal, predicVal, roc_colors, output_filename,isMicro,graph_title):
-
+    figPlots = []
+    for w in range(classNum):
+        figPlots.append(plt.subplots(1))
     training_class = label_binarize(trainingClass, classes=class_num_label)
     predict_class = label_binarize(predicClass, classes=class_num_label)
     classifier = OneVsRestClassifier(
@@ -567,19 +598,22 @@ def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainin
             color=str(roc_colors[1]),
         )
     else:
-        f, axarr = plt.subplots(classNum)
-        for i in range(classNum):
-            axarr[i].plot(
-                fpr[i],
-                tpr[i],
+        for k in range(classNum):
+            figPlots[k][1].plot(
+                fpr[k],
+                tpr[k],
                 color=str(roc_colors[1]),
-                label="ROC curve (area = %0.3f)" % roc_auc[i],
+                label="ROC curve (area = %0.3f)" % roc_auc[k],
             )
-            axarr[i].legend()
-    plt.rcParams.update({'font.size': 21})
-    axarr[0].set_title(graph_title)
-    plt.savefig(output_filename)
-    plt.figure().clear()
+            figPlots[k][1].legend()
+    plt.rcParams.update({'font.size': 15})
+
+    for j in range(classNum):
+        figPlots[j][1].set_title(graph_title +'class'+str(j+1))
+        figPlots[j][0].savefig(output_filename +'class'+str(j+1) + '.png')
+        figPlots[j][0].clear()
+
+
 def gen_roc_graph(training_sample,training_class,predict_sample,predict_class, fileName,graph_title):
     # Create a svm Classifier
     clf = svm.SVC(kernel='linear', random_state=0, probability=True)  # Linear Kernel
@@ -591,7 +625,7 @@ def gen_roc_graph(training_sample,training_class,predict_sample,predict_class, f
     fpr, tpr, _ = metrics.roc_curve(predict_class, class_pred, pos_label=2)
     plt.plot(fpr, tpr, label="micro-average ROC curve (area = {0:0.3f})".format(auc_external))
     plt.title(graph_title)
-    plt.rcParams.update({'font.size': 21})
+    plt.rcParams.update({'font.size': 15})
     plt.legend(loc=4)
     plt.savefig(fileName)
     plt.figure().clear()
@@ -610,8 +644,8 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     # calculating the PCA percentage value
     pU, pS, pV = np.linalg.svd(training_sample)
     pca_percentage_val = np.cumsum(pS) / sum(pS)
-    p1_percentage = pca_percentage_val[0] * 100
-    p2_percentage = pca_percentage_val[1] * 100
+    p2_percentage = pca_percentage_val[0] * 100
+    p1_percentage = pca_percentage_val[1] * 100
     plt.xlabel("PC1(%{0:0.3f}".format(p1_percentage) + ")")
     plt.ylabel("PC2 (%{0:0.3f}".format(p2_percentage) + ")")
     plt.title(graph_title)
@@ -673,4 +707,4 @@ def tupa(X,Y):
         temp_div = np.divide(X_temp,temp_sum)
         return_sampleList.append(temp_div.tolist())
     return return_sampleList
-main(True,0.5,False)
+main(True,0.5,False,'tupa')
