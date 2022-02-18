@@ -14,7 +14,7 @@ def gaussian_algorithm(classNum,class_list,valList):
     k = 0
     true_means = []
     null_means = []
-    while k < 30:
+    while k < 100:
         # get the half random sample and half random variables list
         half_rand_matrix,sample_ind_list = selectHalfRandom(sample_matrix)
         half_rand_class_list = []
@@ -52,26 +52,11 @@ def gaussian_algorithm(classNum,class_list,valList):
     endNum = NormalDist(mu=null_fisher_mean, sigma=null_fisher_std).inv_cdf(0.05)
 
     ####################################  START GRAPH CODE ###################################
-    # generate a histogram by using mean
-    # min_true = np.min(true_fisher_mean)
-    # min_null = np.min(null_fisher_mean)
-    # min_x = min(min_null,min_true)
-    # max_true = np.max(true_fisher_mean)
-    # max_null = np.max(null_fisher_mean)
-    # max_x = max(max_null, max_true)
-    # x_values = np.arange(min_x, max_x, 0.1)
-    #
-    # true_y_values = scipy.stats.norm(true_fisher_mean, true_fisher_std)
-    # plt.plot(x_values, true_y_values.pdf(x_values), label= 'true gaussian')
-    # null_y_values = scipy.stats.norm(null_fisher_mean, null_fisher_std)
-    # plt.plot(x_values, null_y_values.pdf(x_values), label='null gaussian')
-    # rcParams['figure.figsize'] = 10, 10
-
 
     #replace the inf in mean with the largest number in original matrix
 
-    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true fisher mean")
-    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null fisher mean")
+    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true fisher mean", range=(0,8),bins = 35)
+    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null fisher mean", range=(0,8), bins=35)
     true_y = ((1 / (np.sqrt(2 * np.pi) * true_fisher_std)) * np.exp(-0.5 * (1 / true_fisher_std * (true_bins - true_fisher_mean)) ** 2))
     plt.plot(true_bins, true_y, '--',color="#3468eb")
     null_y = ((1 / (np.sqrt(2 * np.pi) * null_fisher_std)) * np.exp(
