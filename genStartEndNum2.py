@@ -1,14 +1,8 @@
 import numpy as np
 import random
 import copy
-import statistics as stat
 from statistics import NormalDist
 import matplotlib.pyplot as plt
-from pylab import rcParams
-import scipy
-from statsmodels.api import Poisson
-import scipy.stats as st
-
 def gaussian_algorithm(classNum,class_list,valList):
     sample_matrix = np.array(valList)
     k = 0
@@ -54,9 +48,9 @@ def gaussian_algorithm(classNum,class_list,valList):
     ####################################  START GRAPH CODE ###################################
 
     #replace the inf in mean with the largest number in original matrix
-
-    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true fisher mean", range=(0,8),bins = 35)
-    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null fisher mean", range=(0,8), bins=35)
+    max_range = max(max(true_means),max(null_means))
+    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true fisher mean", range=(0,max_range),bins = 35)
+    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null fisher mean", range=(0,max_range), bins=35)
     true_y = ((1 / (np.sqrt(2 * np.pi) * true_fisher_std)) * np.exp(-0.5 * (1 / true_fisher_std * (true_bins - true_fisher_mean)) ** 2))
     plt.plot(true_bins, true_y, '--',color="#3468eb")
     null_y = ((1 / (np.sqrt(2 * np.pi) * null_fisher_std)) * np.exp(
@@ -72,7 +66,8 @@ def gaussian_algorithm(classNum,class_list,valList):
     plt.plot(endNum,  0.5, color='red')
     plt.legend(loc='best')
     plt.xlim(mn, mx)
-    plt.savefig('output/FisherMean.png')
+    plt.title("Start and stop number determination via CLT")
+    plt.savefig('output/FisherMean.png',bbox_inches="tight")
     plt.figure().clear()
     return startNum, endNum
 

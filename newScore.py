@@ -12,7 +12,9 @@ import imageio
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from scipy.stats.distributions import chi2
-def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,iternum):
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import scale
+def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,iternum, class_trans_dict,scale_type):
     allSampleList = np.array(allSampleList)
     #get the half randomly selected sample and calculate the fisher ration
     sample_training, sample_test, class_training, class_test = selectRandom(allSampleList, classList,howMuchSplit)
@@ -32,8 +34,13 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
             endNumList.append(i[0])
         sorted_fisher_idx.append(i[0])
     #calculate the old score with all the start variables inside
-    scaled_half_samples,half_mean,half_std = scale_half_data(sample_training)
-    scaled_all_samples = scale_all_data(allSampleList,half_mean,half_std)
+    if scale_type == 'SVN':
+        scaled_half_samples, col_mean = SVN_scale_half_data(sample_training)
+        scaled_all_samples = SVN_scale_all_data(allSampleList, col_mean)
+    else:
+        scaled_half_samples, half_mean, half_std = scale_half_data(sample_training)
+        scaled_all_samples = scale_all_data(allSampleList, half_mean, half_std)
+
     temp_score = calScore(scaled_half_samples[:,startNumList], scaled_all_samples[:,startNumList])
     oldScore = gen_clust.RunClust(temp_score,classList,classNum)
 
@@ -97,7 +104,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
                     plt.fill(x_ellipse, y_ellipse, color=class_color[z - 1], alpha=0.3)
                     class_Xt = score[class_index_list[z], :]
                     plt.scatter(class_Xt[:, 0], class_Xt[:, 1], c=class_color[z - 1], marker=class_label[0],
-                                label='training' + str(z))
+                                label='training ' + [k for k,v in class_trans_dict.items() if v == str(z)][0])
                 # calculating the PCA percentage value
                 pU, pS, pV = np.linalg.svd(temp_scaled_half_samples)
                 pca_percentage_val = np.cumsum(pS) / sum(pS)
@@ -152,7 +159,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
                     plt.fill(x_ellipse, y_ellipse, color=class_color[z - 1], alpha=0.3)
                     class_Xt = score[class_index_list[z], :]
                     plt.scatter(class_Xt[:, 0], class_Xt[:, 1], c=class_color[z - 1], marker=class_label[0],
-                                label='training' + str(z))
+                                label='training ' + [k for k,v in class_trans_dict.items() if v == str(z)][0])
                 # calculating the PCA percentage value
                 pU, pS, pV = np.linalg.svd(temp_scaled_half_samples)
                 pca_percentage_val = np.cumsum(pS) / sum(pS)
@@ -202,6 +209,47 @@ def scale_half_data(samples):
 
     return scaled_samples, samples_mean, samples_std
 
+
+def SVN_scale_half_data(samples):
+    # after get all the selected variables we make them a metrix and calculate the mean
+    # samples = np.array(samples)
+    # col_mean = samples.mean(axis=0)
+    # samples_mean = samples.mean(axis=1)
+    # samples_std = np.std(samples, axis=1)
+    # np.set_printoptions(threshold=sys.maxsize)
+    # samples = np.transpose(samples)
+    # samples_mean = np.transpose(samples_mean)
+    # functionTop = np.subtract(samples, samples_mean)
+    # scaled_samples = np.divide(functionTop, samples_std)
+    # scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
+    # scaled_samples = np.transpose(scaled_samples)
+    # scaled_samples = np.subtract(scaled_samples, col_mean)
+    # for list in scaled_samples:
+    #     list[list==inf] = 10**-12
+    sd = StandardScaler( with_mean=True, with_std=False)
+    sd.fit(samples)
+    col_mean = sd.mean_
+    scaled_samples = scale(samples, axis=1, with_mean=True, with_std=True)
+    return scaled_samples, col_mean
+
+def SVN_scale_all_data(samples,col_mean):
+    # samples = np.array(samples)
+    # samples_mean = samples.mean(axis=1)
+    # samples_std = np.std(samples, axis=1)
+    # samples = np.transpose(samples)
+    # samples_mean = np.transpose(samples_mean)
+    # functionTop = np.subtract(samples, samples_mean)
+    # scaled_samples = np.divide(functionTop, samples_std)
+    # for list in scaled_samples:
+    #     list[list==inf] = 10**-12
+    # scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
+    # scaled_samples = np.transpose(scaled_samples)
+    # scaled_samples = np.subtract(scaled_samples, col_mean)
+    # return scaled_samples
+    scaled_samples = scale(samples, axis=1, with_mean=True, with_std=True)
+    scaled_samples = np.subtract(scaled_samples, col_mean)
+
+    return scaled_samples
 # randomly select half variables from the selected_scaled_variables_list
 def selectRandom(sample_list,class_list, howMuchSplit):
     sample_matrix = np.array(sample_list)
