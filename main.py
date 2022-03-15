@@ -22,18 +22,19 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import scale
 import file_pkg
 
-def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFileName,ClassFileName,sampleNameFile,variableNameFile,scale_type):
-    ITERATION = 200
+def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFileName,ClassFileName,sampleNameFile,variableNameFile,scale_type,iteration,survivalRate):
+    ITERATION = iteration
 
-    # generate roc color
-    red = Color("#dc3c40")
-    ROC_COLOR = list(red.range_to(Color("#55a6bc"), ITERATION + 1))
+    # generate roc color for ROC curve
+    RED = Color("#dc3c40")
+    ROC_COLOR = list(RED.range_to(Color("#55a6bc"), ITERATION + 1))
 
-    # class color
+    # set class color list
     CLASS_COLOR = ["#dc3c40", "#55a6bc", 'purple', 'yellowgreen', 'wheat', 'royalblue', '#42d7f5', '#ca7cf7', '#d2f77c']
     CLASS_LABEL = ["o", "x", "4", "*", "+", "D", "8", "s", "p"]
 
     # create the needed folder to save ouput data
+    # read data from input files
     file_pkg.create_folder()
     if isMotabo:
         sampleList, sampleName, classList, variableName =file_pkg.readMotabo(MotaboFileName)
@@ -43,11 +44,11 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         sampleName = file_pkg.getValFromFileByCols(sampleNameFile)[0]
         variableName = file_pkg.getValFromFileByCols(variableNameFile)
 
-    # Trans classList
+    # get the class number from class name
+    # generate number version of class name
     unique_class = set(classList)
     unique_class = sorted(list(unique_class))
     classNum = len(unique_class)
-    # trans the class
     class_trans_dict = {}
     for i in range(classNum):
         class_trans_dict[unique_class[i]] = str(i+1)
@@ -55,21 +56,22 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         classList = [sub.replace(key, class_trans_dict[key]) for sub in classList]
     classList = [int(x) for x in classList]
 
+    # create label list for plot
     class_num_label = []
     for i in range(1, classNum + 1):
         class_num_label.append(i)
-    # get the variable list
 
-    ori_sample = np.array(sampleList)
+    # back up the original sample list and class list
+    ori_sample = copy.deepcopy(np.array(sampleList))
     ori_class = classList
 
     #Do class Tupa
+    hori_index = []
+    indice_list = []
     if tupaType.lower() =='tupa':
         sampleList = tupa(sampleList,classList)
     elif tupaType.lower()=='classtupa':
         sampleList = class_tupa(sampleList, classList)
-    hori_index = []
-    indice_list =[]
     for i in range(len(sampleList[0])):
         hori_index.append(i)
     for j in range(len(classList)):
@@ -81,10 +83,10 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     file_pkg.export_file(ori_sample, ori_class, indice_list, hori_index, 'output/original_file.csv', class_trans_dict,sampleName,variableName)
 
     ## if there is not enough samples to do the external validation no matter what the user says isexternal will be false
+    ## use hash table to see how many samples for each class and if countSample < 9 we dont do external
+    hash_classCount = [0] * (classNum + 1)
     if len(sampleList) < 50:
         isexternal = False
-    ## use hash table to see how many samples for each class and if countSample < 9 we dont do external
-    hash_classCount = [0]*(classNum+1)
     for c_num in classList:
         hash_classCount[c_num] += 1
     for i in range(1,classNum+1):
@@ -93,9 +95,9 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     if isexternal:
         sampleList, external_validation, classList, external_class, indices_train, indices_test = selectRandom(sampleList, classList, howMuchSplit)
 
-    # output the splited training and external variables in special format
-    index_indices_train =  [x-1 for x in indices_train]
-    index_indices_test =  [x-1 for x in indices_test]
+    # output the splited training and external variables(if meet the external requirement) in special format
+    index_indices_train = [x-1 for x in indices_train]
+    index_indices_test = [x-1 for x in indices_test]
     if isexternal:
         file_pkg.export_file(ori_sample, ori_class, index_indices_train, hori_index, 'output/training_variables.csv', class_trans_dict, sampleName,variableName)
         file_pkg.export_file(ori_sample, ori_class, index_indices_test, hori_index, 'output/external_variables.csv', class_trans_dict, sampleName,variableName)
@@ -107,8 +109,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
 
     # get the start number and the end number
     startNum, endNum = genStartEndNum2.gaussian_algorithm(int(classNum), classList, sampleList)
-    print(startNum)
-    print(endNum)
+
     # create a file to save the generate statistical number(accuracy, sensitivity, selectivity)
     class_stat_list = []
     for classNum in range(1, int(classNum)+1):
@@ -116,6 +117,9 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
 
     # create a hash table to take count for the show up times for each variables
     hash_list = [0]*(len(sampleList[0])+1)
+
+    # create a list of plot when there are more than 2 classes
+    # create a AUC number list to collect all the AUC numbers during the iterations
     figPlot = []
     if classNum == 2 or isMicro:
         auc_table = []
@@ -124,17 +128,13 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         for i in range(classNum+1):
             figPlot.append(plt.subplots(1))
             auc_table.append([])
-    class_index_list = []
-    for i in range(classNum + 1):
-        class_index_list.append([])
-    for i in range(len(classList)):
-        class_index_list[classList[i]].append(i)
 
+    # start Iterations
     for k in range(ITERATION):
-        printStr = "###################################" + str(k)
-        print(printStr)
-        # getting the selected index
+        # Start Feature Selection
         return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit,k, class_trans_dict, scale_type)
+        # calculate the probability of selection for each variables
+        # valid index is the probability of variable that over the survival rate
         for j in return_idx:
             hash_list[j] = hash_list[j]+1
         if k == 0:
@@ -145,30 +145,31 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
             for i in range(len(hash_list)):
                 prob = float(hash_list[i])/float(k+1)
                 # we are only taking the ratio more than 30%
-                if prob > 0.85:
+                if prob > survivalRate:
                     valid_idx.append(i)
-
         selectedVariables = sample_taining[:, valid_idx]
-        ############################################################################  PCA
-        if scale_type == 'SVN':
-            scaled_sample_training,col_mean = SVN_scale_half_data(sample_taining)
-            scaled_all_sample = SVN_scale_all_data(sampleList,col_mean)
+
+        # scale the data
+        if scale_type == 'SNV':
+            scaled_sample_training,col_mean = SNV_scale_half_data(sample_taining)
+            scaled_all_sample = SNV_scale_all_data(sampleList,col_mean)
         else:
             scaled_sample_training,train_mean,train_std = scale_half_data(sample_taining)
             scaled_all_sample = scale_all_data(sampleList,train_mean,train_std)
 
-        # Train the model using the training sets
+        # Train and predict the class
         clf = svm.SVC(kernel='linear', random_state=0, probability=True)
         clf.fit(selectedVariables, class_training)
         class_pred = clf.predict(sample_test[:, valid_idx])
         classofic_report = classification_report(class_test, class_pred)
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
+        # generate the statistic report
         for c in range(0,classNum):
             stat_num = report_lines[c].split(' ')
             stat_num = [i for i in stat_num if i != ""]
             class_stat_list[c].append(stat_num[1:])
-        # generate the roc curve
+        # generate the ROC curve
         if classNum == 2:
             class_pred = clf.predict_proba(sample_test[:, valid_idx])
             class_pred = class_pred[:, 1]
@@ -216,27 +217,25 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
                         color=str(ROC_COLOR[k]),
                     )
                 plt.rcParams.update({'font.size': 10})
-
-
-            # fpr["micro"], tpr["micro"], _ = metrics.roc_curve(predict_class.ravel(), y_score.ravel())
-            # roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
         plt.rcParams.update({'font.size': 10})
 
-    ## save the roc graph
+    # save the roc graph for N iterations
     if classNum ==2:
         plt.savefig('output/rocIterations/roc ' + str(ITERATION) +'.png')
+        plt.figure().clear()
     else:
         for i in range(classNum):
             figPlot[i][1].set_title('Roc ' + str(ITERATION) + ' iterations class: ' + [k for k, v in class_trans_dict.items() if v == str(i+1)][0])
             figPlot[i][0].savefig('output/rocIterations/roc '+str(ITERATION) +'iterations class: '+[k for k,v in class_trans_dict.items() if v == str(i+1)][0]+'.png')
             figPlot[i][0].clear()
 
-    ## save all the auc number in to csv table
+    # save all the auc number in to csv table
     if classNum == 2 or isMicro:
         file_pkg.gen_file_by_list(["Auc Number"],auc_table,'output/auc_table.csv')
     else:
         for j in range(classNum):
             file_pkg.gen_file_by_list(["Auc Number"],auc_table[i],'output/auc_table_class_' + [k for k,v in class_trans_dict.items() if v == str(j+1)][0] + '.csv')
+
     # generate file for selected training and selected validation in special format
     if isexternal:
         file_pkg.export_file(ori_sample, ori_class, index_indices_train, valid_idx, 'output/selected_training_variables.csv', class_trans_dict, sampleName,variableName)
@@ -256,20 +255,19 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     for i in range(len(hash_list)):
         prob = float(hash_list[i])/ITERATION
         # we are only taking the ratio more than 30%
-        if prob > 0.85:
+        if prob > survivalRate:
             valid_idx.append(i)
 
     ####################################  START GRAPH CODE ###################################
-    # generate PCA visualization
-    if scale_type == 'SVN':
-        scale_training_sample, col_mean= SVN_scale_half_data(sampleList)
-        scaled_external, col_mean= SVN_scale_half_data(external_validation)
+    # scale data
+    if scale_type == 'SNV':
+        scale_training_sample, col_mean= SNV_scale_half_data(sampleList)
+        scaled_external, col_mean= SNV_scale_half_data(external_validation)
     else:
         scale_training_sample, scale_training_mean, scale_training_std = scale_half_data(sampleList)
         scaled_external, scale_training_mean, scale_training_std = scale_half_data(external_validation)
 
-
-
+    # group different sample index by different class
     class_index_list = []
     external_class_index_list = []
     for i in range(classNum+1):
@@ -280,12 +278,11 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     for i in range(len(external_class)):
         external_class_index_list[external_class[i]].append(i)
 
+    # calculaye the score for PCA, generate the PCA graph for traning and external
     class_variables = scale_training_sample[:, valid_idx]
     dummyU, dummyS, V = svds(class_variables, k=2)
     V = np.transpose(V)
     score = np.dot(scaled_all_sample[:,valid_idx], V)
-
-
     for z in range(1, classNum+1):
         class_score = score[class_index_list[z],:]
         x_ellipse, y_ellipse = confident_ellipse(class_score[:, 0], class_score[:, 1])
@@ -293,7 +290,6 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         plt.fill(x_ellipse, y_ellipse,color=CLASS_COLOR[z-1], alpha=0.3)
         class_Xt = score[class_index_list[z], :]
         plt.scatter(class_Xt[:, 0], class_Xt[:, 1], c=CLASS_COLOR[z-1], marker=CLASS_LABEL[0], label='training ' + [k for k,v in class_trans_dict.items() if v == str(z)][0])
-    # calculating the PCA percentage value
     pU, pS, pV = np.linalg.svd(class_variables)
     pca_percentage_val = np.cumsum(pS) / sum(pS)
     p2_percentage = pca_percentage_val[0] * 100
@@ -319,15 +315,12 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         plt.legend()
         plt.savefig('output/pca_external.png')
         plt.figure().clear()
-
         conf_matrix = confusion_matrix(external_class, class_pred)
-        conf_matrix = conf_matrix / conf_matrix.astype(np.float).sum(axis=1)
         file_pkg.gen_file_by_matrix(conf_matrix,'output/confusion_matrix.csv')
         clf_extern_no_FS = svm.SVC(kernel='linear', random_state=0, probability=True)
         clf_extern_no_FS.fit(sampleList, classList)
         class_pred_no_FS = clf_extern_no_FS.predict(external_validation)
         conf_matrix_no_FS = confusion_matrix(external_class, class_pred_no_FS)
-        conf_matrix_no_FS = conf_matrix_no_FS / conf_matrix_no_FS.astype(np.float).sum(axis=1)
         file_pkg.gen_file_by_matrix(conf_matrix_no_FS, 'output/confusion_matrix_no_FS.csv')
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
@@ -389,6 +382,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     else:
         mul_roc_graph(classNum, class_num_label, classList, external_class, sampleList[:, valid_idx],
                       external_validation[:, valid_idx], ROC_COLOR,'output/rocValiFS/rocValiFS',isMicro, 'ROC Validation, With Feature Selection ', class_trans_dict)
+
     # graph 5: PCA with Internal and external without FS
     class_variables_no_FS = scale_training_sample
     dummyU, dummyS, V_no_FS = svds(class_variables_no_FS, k=2)
@@ -413,7 +407,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         external_Xt = np.dot(scaled_external, V_no_FS)
         for n in range(1, classNum+1):
             class_external_Xt = external_Xt[external_class_index_list[n], :]
-            plt.scatter(class_external_Xt[:, 0], class_external_Xt[:, 1], c=CLASS_COLOR[n-1], marker=CLASS_LABEL[2],
+            plt.scatter(class_external_Xt[:, 0], class_external_Xt[:, 1], c=CLASS_COLOR[n-1], marker=CLASS_LABEL[1],
                                label='external ' + [k for k,v in class_trans_dict.items() if v == str(n)][0])
     plt.title('PCA Training , Validation, No Feature Selection')
     plt.rcParams.update({'font.size': 10})
@@ -422,10 +416,11 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     plt.figure().clear()
 
     ####################################  END GRAPH CODE ###################################
-## axis=0 is for row
-## axis=1 is for column
+
+# scale half of the sample
+# INPUT : sample data list
+# OUTPUT: scaled  sample data, mean of the sample, stander deviation for the sample
 def scale_half_data(samples):
-    # after get all the selected variables we make them a metrix and calculate the mean
     samples = np.array(samples)
     samples_mean = samples.mean(axis=0)
     samples_std = np.std(samples, axis=0)
@@ -437,6 +432,9 @@ def scale_half_data(samples):
         list[list==inf] = 10**-12
     return scaled_samples, samples_mean, samples_std
 
+# scale samples with the mean and std from previous scaling
+# INPUT : all sample data list, mean of previous scaling, stander deviation of previous scaling
+# OUTPUT: scaled all sample data
 def scale_all_data(samples,mean,std):
     functionTop = np.subtract(samples, mean)
     scaled_samples = np.divide(functionTop, std)
@@ -445,46 +443,28 @@ def scale_all_data(samples,mean,std):
     scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
     return scaled_samples
 
-def SVN_scale_half_data(samples):
-    # after get all the selected variables we make them a metrix and calculate the mean
-    # samples = np.array(samples)
-    # col_mean = samples.mean(axis=0)
-    # samples_mean = samples.mean(axis=1)
-    # samples_std = np.std(samples, axis=1)
-    # np.set_printoptions(threshold=sys.maxsize)
-    # samples = np.transpose(samples)
-    # samples_mean = np.transpose(samples_mean)
-    # functionTop = np.subtract(samples, samples_mean)
-    # scaled_samples = np.divide(functionTop, samples_std)
-    # scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
-    # scaled_samples = np.transpose(scaled_samples)
-    # scaled_samples = np.subtract(scaled_samples, col_mean)
-    # for list in scaled_samples:
-    #     list[list==inf] = 10**-12
+# after get all the selected variables we make them a matrix and calculate the mean by using stander normal variate
+# INPUT : all sample data list
+# OUTPUT: scaled all sample data, the mean of all the variables
+def SNV_scale_half_data(samples):
     sd = StandardScaler(with_mean=True, with_std=False)
     sd.fit(samples)
     col_mean = sd.mean_
     scaled_samples = scale(samples, axis=1, with_mean=True, with_std=True)
     return scaled_samples, col_mean
 
-def SVN_scale_all_data(samples,col_mean):
-    # samples = np.array(samples)
-    # samples_mean = samples.mean(axis=1)
-    # samples_std = np.std(samples, axis=1)
-    # samples = np.transpose(samples)
-    # samples_mean = np.transpose(samples_mean)
-    # functionTop = np.subtract(samples, samples_mean)
-    # scaled_samples = np.divide(functionTop, samples_std)
-    # for list in scaled_samples:
-    #     list[list==inf] = 10**-12
-    # scaled_samples = np.nan_to_num(scaled_samples, nan=(10**-12))
-    # scaled_samples = np.transpose(scaled_samples)
-    # scaled_samples = np.subtract(scaled_samples, col_mean)
+# after get all the selected variables we make them a matrix and calculate the mean by using stander normal variate
+# INPUT : all sample data list,
+
+# OUTPUT: scaled all sample data
+def SNV_scale_all_data(samples,col_mean):
     scaled_samples = scale(samples, axis=1, with_mean=True, with_std=True)
     scaled_samples = np.subtract(scaled_samples, col_mean)
-
     return scaled_samples
 
+# split the sample data randomly by the rate of spliting (0-1)
+# INPUT : sample data list, class list, rate of spliting
+# OUTPUT : training data, validation data, training class, validation class, training data index, validation ata index
 def selectRandom(sample_list,class_list,howMuchSplit):
     indices = np.arange(1,len(class_list)+1)
     sample_matrix = np.array(sample_list)
@@ -492,6 +472,9 @@ def selectRandom(sample_list,class_list,howMuchSplit):
     X_train, X_test, y_train, y_test, indices_train, indices_test = train_test_split(sample_matrix, class_matrix, indices, test_size=float(howMuchSplit), stratify=class_matrix)
     return X_train, X_test, y_train, y_test, indices_train, indices_test
 
+# generate confident ellipse in graph
+# INPUT : score one, score two, confident interval
+# OUTPUT : x axis confident ellipse, y axis confident ellipse
 def confident_ellipse(score1, score2, confident_interval = 0.95):
     score1 = np.array(score1)
     score2 = np.array(score2)
@@ -507,13 +490,16 @@ def confident_ellipse(score1, score2, confident_interval = 0.95):
     theta = np.arange(0, 2*math.pi, 0.01)
     x_ellipse = []
     y_ellipse = []
-
     for i in theta:
         x_temp = d1 + math.sqrt(chi_2) * math.sqrt(eigval[0]) * math.cos(i) * math.cos(phi1) - math.sqrt(chi_2) * math.sqrt(eigval[1]) * math.sin(i) * math.sin(phi1)
         y_temp = d2 + math.sqrt(chi_2) * math.sqrt(eigval[0]) * math.cos(i) * math.sin(phi1) + math.sqrt(chi_2) * math.sqrt(eigval[1]) * math.sin(i) * math.cos(phi1)
         y_ellipse.append(y_temp)
         x_ellipse.append(x_temp)
     return x_ellipse, y_ellipse
+
+# generate ROC graph for data set more than 2 classes
+# INPUT : class number, label of class number, training classes, predict classes, training data, predict data, color list for the roc graph, is Micro ROC, title of the graph, original class name
+# OUTPUT : None
 def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainingVal, predicVal, roc_colors, output_filename,isMicro,graph_title,class_trans_dict):
     figPlots = []
     for w in range(classNum):
@@ -560,7 +546,9 @@ def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainin
         figPlots[j][0].savefig(output_filename +'class '+ [k for k,v in class_trans_dict.items() if v == str(j+1)][0] + '.png')
         figPlots[j][0].clear()
 
-
+# generate ROC graph for data set have 2 classes
+# INPUT : training data, training class, predict data, predict class, name of the output file, title of the graph
+# OUTPUT : None
 def gen_roc_graph(training_sample,training_class,predict_sample,predict_class, fileName, graph_title):
     # Create a svm Classifier
     clf = svm.SVC(kernel='linear', random_state=0, probability=True)  # Linear Kernel
@@ -577,6 +565,9 @@ def gen_roc_graph(training_sample,training_class,predict_sample,predict_class, f
     plt.savefig(fileName,bbox_inches="tight")
     plt.figure().clear()
 
+# generate PCA graph
+# INPUT : training data, number of class, class index list, class color list, class label list, name of the output file, original class name
+# OUTPUT : None
 def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fileName,graph_title, class_trans_dict):
     dummyU, dummyS, V = svds(training_sample, k=2)
     V = np.transpose(V)
@@ -601,6 +592,9 @@ def gen_pca(training_sample,classNum,class_index_list,class_color,class_label,fi
     plt.savefig(fileName,bbox_inches="tight")
     plt.figure().clear()
 
+# pre-processing data algorithm, total useful peak area for irespective of class
+# INPUT : sample data, class data
+# OUTPUT : processed sample data
 def class_tupa(X,Y):
     cls = np.array(Y)
     X = np.array(X)
@@ -633,6 +627,10 @@ def class_tupa(X,Y):
         return_sampleList.append(temp_div.tolist())
     return return_sampleList
 
+# pre-processing data algorithm, total useful peak area depend on class
+# INPUT : sample data, class data
+# OUTPUT : processed sample data
+
 def tupa(X,Y):
     cls = np.array(Y)
     X = np.array(X)
@@ -658,4 +656,46 @@ def tupa(X,Y):
 # isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFileName,ClassFileName,sampleNameFile,variableNameFile
 ## Tupa Selection: tupa, classtupa, notupa
 ## Scale Selection: SNV,AutoScale
-main(True,0.5,False,'classTupa',False,'Input/mota_data.csv','Input/data_algae.csv','Input/class_algae_string.csv','Input/S_name.csv','Input/v_name.csv','AutoScale')
+#main(True,0.5,False,'notupa',False,'Input/mota_data.csv','Input/data_pureOil.csv','Input/class_pureOil_2.csv','Input/sampleName_pureOil.csv','Input/Vname_pureOil.csv','AutoScale',10,0.85)
+#main(True,0.5,False,'classTupa',False,'Input/mota_data.csv','Input/data_algae.csv','Input/class_algae_string.csv','Input/S_name.csv','Input/v_name.csv','AutoScale',10,0.85)
+
+## Needed parameters
+## 1 is external
+## 2 the rate of splite the trainning and validation
+## 3 is Micro for ROC
+## 4 What kind of TUPA : a) classtupa b)tupa c)notupa
+## 5 is the input data from motabo analize
+## 6 your motabo data file name, if not using motabo data just input None instead
+## 7 your data file name (not motabo data )
+## 8 your class file name (not motabo data )
+## 9 your sample name file name (not motabo data )
+## 10 your variable name file name (not motabo data )
+## 11 how would you like to scale your data: a) AotuScale b)SNV
+## 12 how many iterations you like
+## 13 the survival rate
+if __name__ == "__main__":
+    print(sys.argv[1:])
+    if sys.argv[1].lower() == 'true':
+        isexternal = True
+    else:
+        isexternal = False
+    rateSplit = float(sys.argv[2])
+    if sys.argv[3].lower() == 'true':
+        isMicro = True
+    else:
+        isMicro = False
+    tupaType = sys.argv[4]
+    if sys.argv[5].lower() == 'true':
+        isMotabo = True
+    else:
+        isMotabo = False
+    motaboFileName = sys.argv[6]
+    dataFileName = sys.argv[7]
+    classFileName = sys.argv[8]
+    sampleNameFileName = sys.argv[9]
+    variableNameFileName = sys.argv[10]
+    scaleType = sys.argv[11]
+    howManyIteration = int(sys.argv[12])
+    survivalrate = float(sys.argv[13])
+
+    main(isexternal,rateSplit,isMicro,tupaType,isMotabo,motaboFileName,dataFileName,classFileName,sampleNameFileName,variableNameFileName,scaleType,howManyIteration,survivalrate)

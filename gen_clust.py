@@ -2,7 +2,11 @@ import ClustResolution
 import numpy as np
 import itertools
 
+# generate apropriate input parameter for cluster resolution
+# INPUT : sample data, class data, class number
+# OUTPUT : cluster score
 def RunClust(variable_list,class_list,classNum):
+    # if there is only 2 classes
     if classNum == 2:
         clust1 =[]
         clust2 = []
@@ -15,6 +19,7 @@ def RunClust(variable_list,class_list,classNum):
         clust2 = np.array(clust2)
         # Call function ClustResilution to do further calculation
         return ClustResolution.clustResolution(clust1, clust2)
+    # if there are more than 2 classes
     else:
         classNumList = []
         # give you the all labels in a list classNUm = 3, labels = [1,2,3]

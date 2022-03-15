@@ -3,6 +3,9 @@ import csv
 import os
 import numpy as np
 
+# create empty folder to save output data
+# INPUT : None
+# OUTPUT : None
 def create_folder():
     # Create the needed directory if directory not exist
     if not os.path.exists('output/animation'):
@@ -20,6 +23,9 @@ def create_folder():
     if not os.path.exists('output/rocValiNoFS'):
         os.makedirs('output/rocValiNoFS')
 
+# output csv file content as list by column
+# INPUT : file name
+# OUTPUT : data list
 def getValFromFileByCols(fileName):
     df = pd.read_csv(fileName,header=None)
     row_count, column_count = df.shape
@@ -32,7 +38,9 @@ def getValFromFileByCols(fileName):
     return retData
 
 
-# get the list of samples from the original file
+# output csv file content as list by row
+# INPUT : file name
+# OUTPUT : data list
 def getValFromFileByRows(fileName):
     df = pd.read_csv(fileName,header=None)
     row_count, column_count = df.shape
@@ -44,7 +52,9 @@ def getValFromFileByRows(fileName):
         retData.append(tempData)
     return retData
 
-#generate file by the input matrix
+# generate file by the input matrix for sample data
+# INPUT: matrix, output file name
+# OUTPUT : None
 def gen_file_by_matrix(matrix,fileName):
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
@@ -52,7 +62,9 @@ def gen_file_by_matrix(matrix,fileName):
         for row in matrix:
             writer.writerow(row)
 
-#generate file by the input matrix
+# generate file by the input matrix for class data
+# INPUT: data header,matrix, output file name
+# OUTPUT : None
 def gen_file_by_class_matrix(header,matrix,fileName):
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
@@ -61,19 +73,25 @@ def gen_file_by_class_matrix(header,matrix,fileName):
         for row in matrix:
             writer.writerow(row)
 
-#generate file by the input matrix
+# generate file by the input matrix by list (one dimension) by row
+# INPUT : data header, list, output file name
+# OUTPUT : None
 def gen_file_by_list(header,list,fileName):
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header+list)
 
-#generate file by the input matrix
+# generate file by the input matrix by list (one dimension) by column
+# INPUT : data header, list, output file name
+# OUTPUT : NOne
 def gen_file_by_list_col(header,list,fileName):
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerow(list)
-
+# read motaboanalize format csv file
+# INPUT : file name
+# OUTPUT: sample data, sample name, class data, variable name
 def readMotabo(fileName):
     df = pd.read_csv(fileName, header=None)
     row_count, column_count = df.shape
@@ -93,7 +111,9 @@ def readMotabo(fileName):
         sampleList.append(tempData)
     return sampleList, sampleName, classList, variableName
 
-
+# generate motaboanalize format file
+# INPUT : sample data, class data, row index, column index, original class name, sample name, variable name
+# OUTPUT : None
 def export_file(variable, class_list, indice, hori, fileName, label_dic,sampleName,variableName):
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)

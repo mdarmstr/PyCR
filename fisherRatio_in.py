@@ -1,10 +1,12 @@
 import numpy as np
 import statistics as stat
 
+# calculate the fisher ratio
+# INPUT : random selected sample data, class data, class number
+# OUTPUT : dictionary of fisher ratio with key-variable index, value- fisher ratio
 def cal_ratio(rand_sample_list,class_list,classNum):
     # define a fisher ratio list for all columns with default value 0
     fisherRatioDic = {}
-    colObjectList = []
     # for each column sample type we calculate one fisher ratio for one column
     rand_sample_list = np.array(rand_sample_list)
     for i in range(len(rand_sample_list[0])):
