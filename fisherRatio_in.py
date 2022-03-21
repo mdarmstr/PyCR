@@ -1,6 +1,7 @@
 import numpy as np
 import statistics as stat
-
+import warnings
+warnings.filterwarnings('ignore')
 # calculate the fisher ratio
 # INPUT : random selected sample data, class data, class number
 # OUTPUT : dictionary of fisher ratio with key-variable index, value- fisher ratio

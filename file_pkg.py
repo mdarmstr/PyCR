@@ -2,7 +2,8 @@ import pandas as pd
 import csv
 import os
 import numpy as np
-
+import warnings
+warnings.filterwarnings('ignore')
 # create empty folder to save output data
 # INPUT : None
 # OUTPUT : None

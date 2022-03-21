@@ -7,7 +7,8 @@ from scipy.stats import norm
 import math
 from scipy import special
 from scipy.stats import f
-
+import warnings
+warnings.filterwarnings('ignore')
 # get the start and stop number
 # INPUT : class number, class data, sample data
 # OUTPUT : start number, stop number

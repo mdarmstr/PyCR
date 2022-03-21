@@ -21,7 +21,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import scale
 import file_pkg
-
+import warnings
+warnings.filterwarnings('ignore')
 def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFileName,ClassFileName,sampleNameFile,variableNameFile,scale_type,iteration,survivalRate):
     ITERATION = iteration
 
@@ -674,7 +675,6 @@ def tupa(X,Y):
 ## 12 how many iterations you like
 ## 13 the survival rate
 if __name__ == "__main__":
-    print(sys.argv[1:])
     if sys.argv[1].lower() == 'true':
         isexternal = True
     else:

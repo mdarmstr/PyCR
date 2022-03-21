@@ -117,7 +117,7 @@ def clustResolution(clust1, clust2):
         theta0 = np.array(np.random.rand(1)) * pi_matrix.T
         # fminsearch options
 
-        minimum = scipy.optimize.fmin(costfn, theta0, xtol=10**-5, maxfun=10**3)
+        minimum = scipy.optimize.fmin(costfn, theta0, xtol=10**-5, maxfun=10**3, disp=False)
         min = costfn(minimum)
         # print("minimum")
         chisq = (min**2)/2

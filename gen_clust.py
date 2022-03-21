@@ -1,7 +1,8 @@
 import ClustResolution
 import numpy as np
 import itertools
-
+import warnings
+warnings.filterwarnings('ignore')
 # generate apropriate input parameter for cluster resolution
 # INPUT : sample data, class data, class number
 # OUTPUT : cluster score

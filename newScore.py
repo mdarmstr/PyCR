@@ -14,6 +14,8 @@ from sklearn.model_selection import train_test_split
 from scipy.stats.distributions import chi2
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import scale
+import warnings
+warnings.filterwarnings('ignore')
 # start backward Feature Selection and Forward Feature selection
 # INPUT : class number, class data, sample data, start number, stop number , spliting rate, iteration number(in main), original class name, scale type
 # OUTPUT : selected variable index, training sample data, testing sample data, training class data, testing class data
@@ -78,10 +80,13 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
         temp_scaled_all_samples = scaled_all_samples[:, finalOutPutIdx]
         temp_score = calScore(temp_scaled_half_samples, temp_scaled_all_samples)
         newScore = gen_clust.RunClust(temp_score, classList, classNum)
+        s_old = round(oldScore, 4)
+        s_new = round(newScore, 4)
         if newScore > oldScore:
             oldScore = newScore
-
+            print("REMOVED, SCORES [new: old] - ["+ str(s_new) + ":"+str(s_old) + "]" )
         elif newScore < oldScore:
+            print("KEPT, SCORES [new: old] - ["+ str(s_new) + ":"+str(s_old) + "]" )
             finalOutPutIdx.append(idx)
             # generate the PCA graph for the first iteration and gather together to form a gif  animation
             if iternum ==0:
@@ -128,10 +133,11 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
         temp_selected_half_matrix = scaled_half_samples[:, finalOutPutIdx]
         temp_score = calScore(temp_selected_half_matrix, temp_selected_all_matrix)
         newScore = gen_clust.RunClust(temp_score, classList, classNum)
-        print("old: " + str(oldScore))
-        print("new: " + str(newScore))
+        e_old = round(oldScore, 4)
+        e_new = round(newScore, 4)
         if newScore > oldScore:
             oldScore = newScore
+            print("ADD, SCORES [new: old] - ["+ str(e_new) + ":"+str(e_old) + "]" )
             # generate the PCA graph for the first iteration and gather together to form a gif  animation
             if iternum ==0:
                 dummyU, dummyS, V = svds(temp_scaled_half_samples, k=2)
@@ -171,6 +177,7 @@ def setNumber(classNum, classList, allSampleList, startNum, endNum,howMuchSplit,
                 picCounter += 1
         elif newScore < oldScore:
             finalOutPutIdx.remove(index)
+            print("IGNORED, SCORES [new: old] - ["+ str(e_new) + ":"+str(e_old) + "]" )
     png_dir = 'output/animation/'
     images = []
     for file_num in range(len(sorted(os.listdir(png_dir)))-1):
