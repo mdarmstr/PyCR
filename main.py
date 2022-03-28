@@ -22,9 +22,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import scale
 import file_pkg
 import warnings
+import  generate_QC
 warnings.filterwarnings('ignore')
 def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFileName,ClassFileName,sampleNameFile,variableNameFile,scale_type,iteration,survivalRate):
     ITERATION = iteration
+    isQC = True
 
     # generate roc color for ROC curve
     RED = Color("#dc3c40")
@@ -34,6 +36,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     CLASS_COLOR = ["#dc3c40", "#55a6bc", 'purple', 'yellowgreen', 'wheat', 'royalblue', '#42d7f5', '#ca7cf7', '#d2f77c']
     CLASS_LABEL = ["o", "x", "4", "*", "+", "D", "8", "s", "p"]
 
+    print("Loading start and stop number .....")
     # create the needed folder to save ouput data
     # read data from input files
     file_pkg.create_folder()
@@ -132,6 +135,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
 
     # start Iterations
     for k in range(ITERATION):
+        print("################## ITERATION "+ str(k)+" ##################")
         # Start Feature Selection
         return_idx, sample_taining, sample_test, class_training, class_test = newScore.setNumber(int(classNum), classList, sampleList, startNum, endNum, howMuchSplit,k, class_trans_dict, scale_type)
         # calculate the probability of selection for each variables
@@ -301,14 +305,64 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
     plt.title('PCA training')
     plt.legend()
     plt.savefig('output/pca_taining.png')
-    if isexternal:
-        external_Xt = np.dot(scaled_external[:,valid_idx], V)
-        for n in range(1, classNum+1):
-            class_external_Xt = external_Xt[external_class_index_list[n], :]
-            plt.scatter(class_external_Xt[:, 0], class_external_Xt[:, 1], c=CLASS_COLOR[n-1], marker=CLASS_LABEL[1],
-                               label='external ' + [k for k,v in class_trans_dict.items() if v == str(n)][0])
+    if isexternal and isQC:
+        QC_data = generate_QC.generateQC('Input/class_algae_string.csv', 'Input/data_algae.csv')
+        qc_external_validation = list(external_validation) + QC_data
+        qc_external_validation = np.array(qc_external_validation)
+        qc_sampleList = list(sampleList) + QC_data
+        qc_scaled_external, qc_scale_external_mean, qc_scale_external_std = scale_half_data(qc_external_validation)
+        qc_classNum = classNum +1
+        qc_classList = list(classList) + [qc_classNum]*len(QC_data)
+        qc_external_class_index_list = copy.deepcopy(external_class_index_list)
+        qc_external_class_index_list.append([])
+        qc_class_trans_dict = copy.deepcopy(class_trans_dict)
+        qc_class_trans_dict['QC class'] = str(qc_classNum)
+        for i in range(len(qc_classList)):
+            if qc_classList[i] == qc_classNum:
+                qc_external_class_index_list[qc_classNum].append(i)
+        qc_external_Xt = np.dot(qc_scaled_external[:,valid_idx], V)
+        for n in range(1, qc_classNum+1):
+            qc_class_external_Xt = qc_external_Xt[qc_external_class_index_list[n], :]
+            plt.scatter(qc_class_external_Xt[:, 0], qc_class_external_Xt[:, 1], c=CLASS_COLOR[n-1], marker=CLASS_LABEL[1],
+                               label='external ' + [k for k,v in qc_class_trans_dict.items() if v == str(n)][0])
+        plt.title('PCA Training , Validation, with Feature Selection ')
+        plt.rcParams.update({'font.size': 10})
+        plt.legend()
+        plt.savefig('output/pca_external.png')
+        plt.figure().clear()
+
+        # generate confusion matrix and statistical report
         clf_extern = svm.SVC(kernel='linear', random_state=0, probability=True)
-        clf_extern.fit(sampleList[:,valid_idx], classList)
+        clf_extern.fit(sampleList[:, valid_idx], classList)
+        class_pred = clf_extern.predict(external_validation[:, valid_idx])
+        conf_matrix = confusion_matrix(external_class, class_pred)
+        file_pkg.gen_file_by_matrix(conf_matrix, 'output/confusion_matrix.csv')
+        clf_extern_no_FS = svm.SVC(kernel='linear', random_state=0, probability=True)
+        clf_extern_no_FS.fit(sampleList, classList)
+        class_pred_no_FS = clf_extern_no_FS.predict(external_validation)
+        conf_matrix_no_FS = confusion_matrix(external_class, class_pred_no_FS)
+        file_pkg.gen_file_by_matrix(conf_matrix_no_FS, 'output/confusion_matrix_no_FS.csv')
+        classofic_report = classification_report(external_class, class_pred)
+        report_lines = classofic_report.split('\n')
+        report_lines = report_lines[2:]
+
+        # create csv tables for the stat numbers
+        for c in range(0, classNum):
+            stat_num = report_lines[c].split(' ')
+            stat_num = [i for i in stat_num if i != ""]
+            data = stat_num[1:]
+            file_pkg.gen_file_by_list_col(["Selectivity", "Sensitivity", "Accuracy"], data,
+                                          'output/external_stat_report_class_' +
+                                          [k for k, v in class_trans_dict.items() if v == str(c + 1)][0] + '.csv')
+
+    elif isexternal:
+        external_Xt = np.dot(scaled_external[:, valid_idx], V)
+        for n in range(1, classNum + 1):
+            class_external_Xt = external_Xt[external_class_index_list[n], :]
+            plt.scatter(class_external_Xt[:, 0], class_external_Xt[:, 1], c=CLASS_COLOR[n - 1], marker=CLASS_LABEL[1],
+                        label='external ' + [k for k, v in class_trans_dict.items() if v == str(n)][0])
+        clf_extern = svm.SVC(kernel='linear', random_state=0, probability=True)
+        clf_extern.fit(sampleList[:, valid_idx], classList)
         class_pred = clf_extern.predict(external_validation[:, valid_idx])
         classofic_report = classification_report(external_class, class_pred)
         plt.title('PCA Training , Validation, with Feature Selection ')
@@ -316,6 +370,11 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         plt.legend()
         plt.savefig('output/pca_external.png')
         plt.figure().clear()
+
+        # generate confusion matrix and statistical report
+        clf_extern = svm.SVC(kernel='linear', random_state=0, probability=True)
+        clf_extern.fit(sampleList[:, valid_idx], classList)
+        class_pred = clf_extern.predict(external_validation[:, valid_idx])
         conf_matrix = confusion_matrix(external_class, class_pred)
         file_pkg.gen_file_by_matrix(conf_matrix,'output/confusion_matrix.csv')
         clf_extern_no_FS = svm.SVC(kernel='linear', random_state=0, probability=True)
@@ -323,6 +382,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         class_pred_no_FS = clf_extern_no_FS.predict(external_validation)
         conf_matrix_no_FS = confusion_matrix(external_class, class_pred_no_FS)
         file_pkg.gen_file_by_matrix(conf_matrix_no_FS, 'output/confusion_matrix_no_FS.csv')
+        classofic_report = classification_report(external_class, class_pred)
         report_lines = classofic_report.split('\n')
         report_lines = report_lines[2:]
 
@@ -340,7 +400,7 @@ def main(isexternal,howMuchSplit,isMicro,tupaType,isMotabo,MotaboFileName,DataFi
         if classNum == 2:
            gen_roc_graph(sampleList[:,valid_idx],classList,external_validation[:,valid_idx],external_class,"output/rocExternal/roc_external.png", 'ROC External ')
         else:
-            mul_roc_graph(classNum,class_num_label,classList,external_class,sampleList[:,valid_idx],external_validation[:,valid_idx],ROC_COLOR,"output/rocExternal/ROC External ",isMicro,'ROC External ßß', class_trans_dict)
+            mul_roc_graph(classNum,class_num_label,classList,external_class,sampleList[:,valid_idx],external_validation[:,valid_idx],ROC_COLOR,"output/rocExternal/ROC External ",isMicro,'ROC External B', class_trans_dict)
 
 
     # generate 4 SVM graph

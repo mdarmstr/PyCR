@@ -2,12 +2,16 @@ import pandas as pd
 import csv
 import os
 import numpy as np
+import glob
 import warnings
+import shutil
 warnings.filterwarnings('ignore')
 # create empty folder to save output data
 # INPUT : None
 # OUTPUT : None
 def create_folder():
+    shutil.rmtree("output")
+    os.mkdir('output')
     # Create the needed directory if directory not exist
     if not os.path.exists('output/animation'):
         os.makedirs('output/animation')
