@@ -757,5 +757,4 @@ if __name__ == "__main__":
     scaleType = sys.argv[11]
     howManyIteration = int(sys.argv[12])
     survivalrate = float(sys.argv[13])
-
     main(isexternal,rateSplit,isMicro,tupaType,isMotabo,motaboFileName,dataFileName,classFileName,sampleNameFileName,variableNameFileName,scaleType,howManyIteration,survivalrate)

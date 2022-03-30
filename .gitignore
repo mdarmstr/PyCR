@@ -9,3 +9,13 @@ venv/
 DS_Store
 variableProb.xlsx
 *.pyc
+Input/class_Mixoils_dataset.csv
+Input/class_pureOil.csv
+Input/class_pureOil_2.csv
+Input/data_Mixoils_dataset.csv
+Input/data_pureOil.csv
+Input/mota_data.csv
+Input/sample_name_misOil.csv
+Input/sampleName_pureOil.csv
+Input/Vname.csv
+Input/Vname_pureOil.csv
