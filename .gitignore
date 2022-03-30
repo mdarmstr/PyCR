@@ -8,3 +8,4 @@ dubug_testScore/
 venv/
 .DS_Store
 variableProb.xlsx
+*.pyc
