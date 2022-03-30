@@ -6,6 +6,6 @@ data_fo/
 data/
 dubug_testScore/
 venv/
-.DS_Store
+DS_Store
 variableProb.xlsx
 *.pyc
