@@ -8,11 +8,13 @@ import math
 from scipy import special
 from scipy.stats import f
 import warnings
+import SelectivityRatio_in
+import vipScore_in
 warnings.filterwarnings('ignore')
 # get the start and stop number
 # INPUT : class number, class data, sample data
 # OUTPUT : start number, stop number
-def gaussian_algorithm(classNum,class_list,valList):
+def gaussian_algorithm(classNum,class_list,valList,V_rankingAlgoithm,nComponent):
     ITERATIONS = 100
     sample_matrix = np.array(valList)
     k = 0
@@ -35,10 +37,17 @@ def gaussian_algorithm(classNum,class_list,valList):
         for i in range(len(half_rand_class_list)):
             null_dist_classNum.append(random.choice(classNum_list))
         # calculate the tru and null fisher ratio
-        true_fisherRatio = cal_fish_ratio(half_rand_matrix, true_dist_classNum, classNum)
-        null_fisherRatio = cal_fish_ratio(half_rand_matrix, null_dist_classNum, classNum)
+        if V_rankingAlgoithm == "fisher":
+            true_fisherRatio = cal_fish_ratio(half_rand_matrix, true_dist_classNum, classNum)
+            null_fisherRatio = cal_fish_ratio(half_rand_matrix, null_dist_classNum, classNum)
+        elif V_rankingAlgoithm == 'vip':
+            true_fisherRatio = vipScore_in.vipy(half_rand_matrix, true_dist_classNum, nComponent)
+            null_fisherRatio = vipScore_in.vipy(half_rand_matrix, null_dist_classNum, nComponent)
+        elif V_rankingAlgoithm == 'selectivity':
+            true_fisherRatio = SelectivityRatio_in.selrpy(half_rand_matrix, true_dist_classNum, nComponent)
+            null_fisherRatio = SelectivityRatio_in.selrpy(half_rand_matrix, null_dist_classNum, nComponent)
         # generate the Theoretical and observed distribution of F values
-        if k == 0:
+        if k == 0 and V_rankingAlgoithm == 'fisher':
             dfn = classNum-1
             dfd = len(sample_matrix) - classNum
 
@@ -82,8 +91,8 @@ def gaussian_algorithm(classNum,class_list,valList):
     # replace the inf in mean with the largest number in original matrix
     max_range = max(max(true_means),max(null_means))
     # start the true and null gaussian
-    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true fisher mean", range=(0,max_range),bins = 35)
-    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null fisher mean", range=(0,max_range), bins=35)
+    true_n, true_bins, true_patches = plt.hist(true_means, density=True,color="#3468eb",alpha=.6, label="true mean", range=(0,max_range),bins = 35)
+    null_n, null_bins, null_patches = plt.hist(null_means, density=True, color="#34ebba", alpha=.6, label=" null mean", range=(0,max_range), bins=35)
     true_mean, true_std = norm.fit(true_means)
     null_mean, null_std = norm.fit(null_means)
     # true_y = ((1 / (np.sqrt(2 * np.pi) * true_fisher_std)) * np.exp(-0.5 * (1 / true_fisher_std * (true_bins - true_fisher_mean)) ** 2))
@@ -110,8 +119,7 @@ def gaussian_algorithm(classNum,class_list,valList):
     endNum = NormalDist(mu=null_fisher_mean, sigma=null_fisher_std).inv_cdf((1-P))
     ## Draw the graph
     plt.plot(null_bins, null_y, '--', color="#34ebba")
-    plt.ylabel("Likelihood")
-    plt.xlabel("Mean of Fisher ratio")
+
     plt.tight_layout()
     mn, mx = plt.xlim()
     plt.plot([startNum, startNum], [0, 0.5], color='blue', label="Start Number")
@@ -120,8 +128,21 @@ def gaussian_algorithm(classNum,class_list,valList):
     plt.plot(endNum,  0.5, color='red')
     plt.legend(loc='best')
     plt.xlim(mn, mx)
-    plt.title("Start and stop number determination via CLT")
-    plt.savefig('output/FisherMean.png', bbox_inches="tight")
+    if V_rankingAlgoithm == 'fisher':
+        plt.ylabel("Likelihood")
+        plt.xlabel("Mean of Fisher ratio")
+        plt.title("Start and stop number determination via CLT")
+        plt.savefig('output/FisherMean.png', bbox_inches="tight")
+    elif V_rankingAlgoithm == 'vip':
+        plt.ylabel("Likelihood")
+        plt.xlabel("Mean of Vip ratio")
+        plt.title("Start and stop number determination via CLT")
+        plt.savefig('output/VipMean.png', bbox_inches="tight")
+    elif V_rankingAlgoithm == "selectivity":
+        plt.ylabel("Likelihood")
+        plt.xlabel("Mean of Selectivity ratio")
+        plt.title("Start and stop number determination via CLT")
+        plt.savefig('output/SelectivityMean.png', bbox_inches="tight")
     plt.figure().clear()
     return startNum, endNum
 

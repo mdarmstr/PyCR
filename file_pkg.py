@@ -61,7 +61,7 @@ def getValFromFileByRows(fileName):
 # INPUT: matrix, output file name
 # OUTPUT : None
 def gen_file_by_matrix(matrix,fileName):
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    with open(fileName, 'w', newline='') as f:
         writer = csv.writer(f)
         # write multiple rows
         for row in matrix:
@@ -71,7 +71,7 @@ def gen_file_by_matrix(matrix,fileName):
 # INPUT: data header,matrix, output file name
 # OUTPUT : None
 def gen_file_by_class_matrix(header,matrix,fileName):
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    with open(fileName, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         # write multiple rows
@@ -82,7 +82,7 @@ def gen_file_by_class_matrix(header,matrix,fileName):
 # INPUT : data header, list, output file name
 # OUTPUT : None
 def gen_file_by_list(header,list,fileName):
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    with open(fileName, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header+list)
 
@@ -90,7 +90,7 @@ def gen_file_by_list(header,list,fileName):
 # INPUT : data header, list, output file name
 # OUTPUT : NOne
 def gen_file_by_list_col(header,list,fileName):
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    with open(fileName, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerow(list)
@@ -120,7 +120,7 @@ def readMotabo(fileName):
 # INPUT : sample data, class data, row index, column index, original class name, sample name, variable name
 # OUTPUT : None
 def export_file(variable, class_list, indice, hori, fileName, label_dic,sampleName,variableName):
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    with open(fileName, 'w', newline='') as f:
         writer = csv.writer(f)
         class_list = np.array(class_list)
         trans_class_list = []
