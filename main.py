@@ -633,7 +633,7 @@ def mul_roc_graph(classNum, class_num_label, trainingClass, predicClass, trainin
             figPlots[k][1].legend()
     plt.rcParams.update({'font.size': 14})
     if classNum ==2 or isMicro:
-        plt.savefig('output/rocIterations/' +output_filename+'.png')
+        plt.savefig(output_filename+'.png')
         plt.figure().clear()
     else:
         for j in range(classNum):
